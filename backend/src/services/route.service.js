@@ -121,6 +121,42 @@ function generateResources(type, durationMin, distanceKm) {
 }
 
 /**
+ * Fetch a single OSRM route between two points.
+ */
+async function fetchOSRMSegment(origin, destination, profile = "driving") {
+  const { lat: oLat, lng: oLng } = typeof origin === "object" ? origin : await geocode(origin);
+  const { lat: dLat, lng: dLng } = typeof destination === "object" ? destination : await geocode(destination);
+
+  const url = `${OSRM_BASE}/${profile}/${oLng},${oLat};${dLng},${dLat}?overview=full&geometries=geojson&steps=true`;
+  console.log("OSRM segment URL:", url);
+  const res = await fetch(url);
+  const json = await res.json();
+
+  if (json.code !== "Ok" || !json.routes || !json.routes.length) {
+    throw new Error(`OSRM returned no route for segment`);
+  }
+
+  const route = json.routes[0];
+  // Keep as [lng, lat] — frontend normalizeCoordinates() will swap to [lat, lng] for Leaflet
+  const geometry = route.geometry.coordinates;
+  console.log("OSRM segment geometry sample (lng,lat):", geometry.slice(0, 3));
+  const distanceKm = route.distance / 1000;
+  const durationMin = Math.round(route.duration / 60);
+
+  const osrmSteps = (route.legs[0]?.steps || []).filter((s) => s.mode === "drive" || s.mode === "walk" || s.distance > 10);
+
+  const turnSteps = osrmSteps.map((s) => ({
+    instruction: s.maneuver?.instruction || s.name || "Continue",
+    distance: Math.round(s.distance),
+    duration: Math.round(s.duration / 60),
+    mode: s.mode === "drive" ? "road" : "walk",
+    name: s.name || "",
+  }));
+
+  return { geometry, distanceKm: Math.round(distanceKm * 10) / 10, durationMin, steps: turnSteps };
+}
+
+/**
  * Fetch ALL real OSRM routes with alternatives.
  * Returns ONLY geometry + metrics + resource composition.
  */
@@ -142,10 +178,18 @@ async function fetchOSRMRoutes(origin, destination, profile = "driving") {
   const typeLabels = ["fastest", "cheapest", "comfort"];
 
   return json.routes.map((route, index) => {
-    const geometry = route.geometry.coordinates.map(([lng, lat]) => [lat, lng]);
+    // Keep as [lng, lat] — frontend normalizeCoordinates() handles the swap for Leaflet
+    const geometry = route.geometry.coordinates;
+    console.log(`OSRM route[${index}] geometry sample (lng,lat):`, geometry.slice(0, 3));
     const distanceKm = route.distance / 1000;
     const durationMin = Math.round(route.duration / 60);
     const type = typeLabels[index] || "comfort";
+
+    const osrmHour = new Date().getHours();
+    const osrmIsPeak = (osrmHour >= 8 && osrmHour <= 11) || (osrmHour >= 17 && osrmHour <= 21);
+    const osrmTrafficLevel = distanceKm < 5 ? "low" : distanceKm <= 10 ? "medium" : "high";
+    const baseConf = type === "fastest" ? 88 : type === "cheapest" ? 76 : 82;
+    const confidence = Math.round(baseConf - (osrmIsPeak ? 5 : 0) - (osrmTrafficLevel === "high" ? 4 : 0));
 
     return {
       id: type,
@@ -154,15 +198,15 @@ async function fetchOSRMRoutes(origin, destination, profile = "driving") {
       geometry,
       distanceKm: Math.round(distanceKm * 10) / 10,
       durationMin,
+      confidence,
       estimatedCost: type === "cheapest"
         ? Math.round(10 + distanceKm * 0.8)
         : type === "comfort"
           ? Math.round(80 + distanceKm * 9)
           : Math.round(40 + distanceKm * 2.5),
-      trafficLevel: distanceKm < 5 ? "low" : distanceKm <= 10 ? "medium" : "high",
+      trafficLevel: osrmTrafficLevel,
       predictedDelay: (() => {
-        const hour = new Date().getHours();
-        const m = (hour >= 8 && hour <= 11) ? 0.20 : (hour >= 17 && hour <= 21) ? 0.25 : 0;
+        const m = osrmIsPeak ? (osrmHour >= 17 ? 0.25 : 0.20) : 0;
         return Math.round(durationMin * m);
       })(),
       transfers: type === "comfort" ? 0 : type === "cheapest" ? 2 : 1,
@@ -172,5 +216,65 @@ async function fetchOSRMRoutes(origin, destination, profile = "driving") {
   });
 }
 
+/**
+ * Fetch multi-stop route: geocode all waypoints, call OSRM per segment, merge geometries.
+ * Returns { waypoints, segments, mergedGeometry, totalDistanceKm, totalDurationMin, steps }
+ */
+async function fetchMultiStopRoute(waypoints, profile = "driving") {
+  if (waypoints.length < 2) {
+    throw new Error("At least 2 waypoints are required for multi-stop routing");
+  }
+
+  const geocoded = await Promise.all(waypoints.map((wp) =>
+    typeof wp === "object" ? wp : geocode(wp)
+  ));
+
+  const segments = [];
+  let mergedGeometry = [];
+  let totalDistanceKm = 0;
+  let totalDurationMin = 0;
+  const allSteps = [];
+
+  for (let i = 0; i < geocoded.length - 1; i++) {
+    const segment = await fetchOSRMSegment(geocoded[i], geocoded[i + 1], profile);
+    console.log(`Segment ${i}: ${waypoints[i]} → ${waypoints[i+1]}, coords: ${segment.geometry.length}, sample:`, segment.geometry.slice(0, 2));
+
+    segments.push({
+      from: waypoints[i],
+      to: waypoints[i + 1],
+      fromCoord: geocoded[i],
+      toCoord: geocoded[i + 1],
+      geometry: segment.geometry,
+      distanceKm: segment.distanceKm,
+      durationMin: segment.durationMin,
+      steps: segment.steps,
+    });
+
+    // Merge segment geometries — skip first coord of subsequent segments to avoid duplicates
+    if (mergedGeometry.length > 0 && segment.geometry.length > 0) {
+      mergedGeometry = mergedGeometry.concat(segment.geometry.slice(1));
+    } else {
+      mergedGeometry = mergedGeometry.concat(segment.geometry);
+    }
+
+    totalDistanceKm += segment.distanceKm;
+    totalDurationMin += segment.durationMin;
+    allSteps.push(...segment.steps);
+  }
+
+  console.log("Multi-stop merged geometry total coords:", mergedGeometry.length, "sample:", mergedGeometry.slice(0, 3));
+
+  return {
+    waypoints: geocoded,
+    segments,
+    mergedGeometry,
+    totalDistanceKm: Math.round(totalDistanceKm * 10) / 10,
+    totalDurationMin,
+    steps: allSteps,
+  };
+}
+
 exports.geocode = geocode;
 exports.fetchOSRMRoutes = fetchOSRMRoutes;
+exports.fetchMultiStopRoute = fetchMultiStopRoute;
+exports.generateResources = generateResources;

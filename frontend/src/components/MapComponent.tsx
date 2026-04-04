@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Polyline, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -32,6 +32,35 @@ const redIcon = new L.Icon({
   shadowSize: SHADOW_SIZE,
 });
 
+const greenIcon = new L.Icon({
+  iconUrl: `${BASE_MARKER}/marker-icon-2x-green.png`,
+  shadowUrl: SHADOW,
+  iconSize: ICON_SIZE,
+  iconAnchor: ICON_ANCHOR,
+  shadowSize: SHADOW_SIZE,
+});
+
+const orangeIcon = new L.Icon({
+  iconUrl: `${BASE_MARKER}/marker-icon-2x-orange.png`,
+  shadowUrl: SHADOW,
+  iconSize: ICON_SIZE,
+  iconAnchor: ICON_ANCHOR,
+  shadowSize: SHADOW_SIZE,
+});
+
+const userLocationIcon = L.divIcon({
+  className: 'user-location-marker',
+  html: `
+    <div style="position:relative;width:20px;height:20px;">
+      <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:14px;height:14px;background:#3b82f6;border:3px solid white;border-radius:50%;box-shadow:0 0 8px rgba(59,130,246,0.5);z-index:2;"></div>
+      <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:28px;height:28px;background:rgba(59,130,246,0.2);border-radius:50%;animation:userPulse 2s ease-in-out infinite;z-index:1;"></div>
+    </div>
+    <style>@keyframes userPulse{0%,100%{transform:translate(-50%,-50%) scale(1);opacity:0.6}50%{transform:translate(-50%,-50%) scale(1.4);opacity:0.2}}</style>
+  `,
+  iconSize: [20, 20],
+  iconAnchor: [10, 10],
+});
+
 export interface LatLng { lat: number; lng: number; }
 
 export interface MapRoute {
@@ -41,20 +70,49 @@ export interface MapRoute {
   positions: [number, number][];
 }
 
+export interface MapStop {
+  label: string;
+  position: [number, number];
+  icon?: L.Icon<L.IconOptions>;
+  type?: 'start' | 'stop' | 'destination';
+}
+
+export interface UserLocation {
+  lat: number;
+  lng: number;
+  accuracy?: number;
+}
+
 interface MapComponentProps {
   routes: MapRoute[];
   selectedRouteId?: string;
   sourceLabel?: string;
   destinationLabel?: string;
+  stops?: MapStop[];
+  userLocation?: UserLocation | null;
+  navigationMode?: boolean;
+  segmentGeometries?: [number, number][][];
+  currentSegmentIndex?: number;
+  onUserLocationChange?: (loc: UserLocation) => void;
 }
 
+/**
+ * Converts OSRM raw [lng, lat] coordinates to Leaflet [lat, lng] format.
+ * OSRM GeoJSON uses [longitude, latitude] per spec.
+ * Leaflet Polyline/Marker expects [latitude, longitude].
+ *
+ * Detection heuristic: if first coord's x-value > 50, it's a longitude (e.g. Mumbai lng ≈ 72.8).
+ * Mumbai latitude ≈ 19 (< 50), longitude ≈ 72.8 (> 50).
+ */
 export function normalizeCoordinates(raw: [number, number][]): [number, number][] {
   if (!raw || raw.length === 0) return [];
   const [first] = raw;
-  const needsSwap = Math.abs(first[0]) > 50;
-  if (needsSwap) {
-    return raw.map(([a, b]) => [b, a]);
+  // If first element looks like a longitude (> 50), swap to [lat, lng] for Leaflet
+  const isLngFirst = Math.abs(first[0]) > 50;
+  if (isLngFirst) {
+    return raw.map(([lng, lat]) => [lat, lng]);
   }
+  // Already in [lat, lng] format
   return raw;
 }
 
@@ -73,6 +131,46 @@ function FlyToMarkers({ allPositions }: { allPositions: [number, number][] }) {
   return null;
 }
 
+function UserLocationTracker({ onUserLocationChange }: {
+  onUserLocationChange?: (loc: UserLocation) => void;
+}) {
+  const map = useMap();
+  const watchIdRef = useRef<number | null>(null);
+  const onUserLocationChangeRef = useRef(onUserLocationChange);
+
+  useEffect(() => {
+    onUserLocationChangeRef.current = onUserLocationChange;
+  }, [onUserLocationChange]);
+
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+
+    watchIdRef.current = navigator.geolocation.watchPosition(
+      (position) => {
+        const loc: UserLocation = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+          accuracy: position.coords.accuracy,
+        };
+        onUserLocationChangeRef.current?.(loc);
+        map.flyTo([loc.lat, loc.lng], 14, { animate: true, duration: 0.6 });
+      },
+      (err) => {
+        console.warn('Geolocation watch error:', err.message);
+      },
+      { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 }
+    );
+
+    return () => {
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+      }
+    };
+  }, [map]);
+
+  return null;
+}
+
 const TYPE_COLORS: Record<string, string> = {
   fastest: '#22c55e',
   cheapest: '#3b82f6',
@@ -86,6 +184,12 @@ export default function MapComponent({
   selectedRouteId,
   sourceLabel,
   destinationLabel,
+  stops = [],
+  userLocation = null,
+  navigationMode = false,
+  segmentGeometries,
+  currentSegmentIndex = 0,
+  onUserLocationChange,
 }: MapComponentProps) {
   const allPositions = (routes || []).flatMap((r) => r?.positions || []);
   const selectedRoute = (routes || []).find((r) => r.id === selectedRouteId);
@@ -114,48 +218,110 @@ export default function MapComponent({
         />
 
         <FlyToMarkers allPositions={allPositions} />
+        <UserLocationTracker
+          onUserLocationChange={onUserLocationChange}
+        />
 
-        {[...(routes || [])]
-          .sort((a, b) =>
-            a.id === selectedRouteId ? 1 : b.id === selectedRouteId ? -1 : 0
-          )
-          .map((route) => {
-            if (!route || !route.positions || route.positions.length === 0) return null;
-            const isSelected = route.id === selectedRouteId;
-            const routeColor = TYPE_COLORS[route.type] || route.color || '#888';
+        {segmentGeometries && segmentGeometries.length > 0
+          ? segmentGeometries.map((geom, idx) => {
+              // normalizeCoordinates converts OSRM [lng,lat] → Leaflet [lat,lng]
+              const normalized = normalizeCoordinates(geom);
+              console.log(`Segment ${idx} normalized coords (first 3):`, normalized.slice(0, 3));
+              if (normalized.length < 2) return null;
+              const isActive = navigationMode && idx === currentSegmentIndex;
+              const isPast = navigationMode && idx < currentSegmentIndex;
+              return (
+                <Polyline
+                  key={`segment-${idx}`}
+                  positions={normalized}
+                  pathOptions={{
+                    color: isPast ? '#94a3b8' : isActive ? '#22c55e' : '#94a3b8',
+                    weight: isActive ? 6 : 3,
+                    opacity: isPast ? 0.25 : isActive ? 1 : 0.4,
+                    dashArray: isActive ? undefined : '6,6',
+                    lineCap: 'round',
+                    lineJoin: 'round',
+                  }}
+                />
+              );
+            })
+          : [...(routes || [])]
+              .sort((a, b) =>
+                a.id === selectedRouteId ? 1 : b.id === selectedRouteId ? -1 : 0
+              )
+              .map((route) => {
+                if (!route || !route.positions || route.positions.length < 2) return null;
+                const isSelected = route.id === selectedRouteId;
+                const routeColor = TYPE_COLORS[route.type] || route.color || '#888';
+                console.log(`Route ${route.id} positions (first 3):`, route.positions.slice(0, 3));
 
-            return (
-              <Polyline
-                key={route.id}
-                positions={route.positions}
-                pathOptions={{
-                  color: isSelected ? routeColor : '#94a3b8',
-                  weight: isSelected ? 6 : 2,
-                  opacity: isSelected ? 1 : 0.35,
-                  dashArray: isSelected ? undefined : '6,6',
-                  lineCap: 'round',
-                  lineJoin: 'round',
-                }}
-              />
-            );
-          })}
+                return (
+                  <Polyline
+                    key={route.id}
+                    positions={route.positions}
+                    pathOptions={{
+                      color: isSelected ? routeColor : '#94a3b8',
+                      weight: isSelected ? 6 : 2,
+                      opacity: isSelected ? 1 : 0.35,
+                      dashArray: isSelected ? undefined : '6,6',
+                      lineCap: 'round',
+                      lineJoin: 'round',
+                    }}
+                  />
+                );
+              })}
 
-        {startPos && (
-          <Marker position={[startPos.lat, startPos.lng]} icon={blueIcon}>
+        {stops.length > 0
+          ? stops.map((stop, idx) => {
+              let icon: L.Icon<L.IconOptions> = orangeIcon;
+              if (stop.type === 'start') icon = blueIcon;
+              else if (stop.type === 'destination') icon = redIcon;
+              else if (stop.icon) icon = stop.icon;
+
+              return (
+                <Marker key={`stop-${idx}`} position={stop.position} icon={icon}>
+                  <Popup>
+                    <div className="text-sm font-semibold">{stop.label}</div>
+                  </Popup>
+                </Marker>
+              );
+            })
+          : (
+              <>
+                {startPos && (
+                  <Marker position={[startPos.lat, startPos.lng]} icon={blueIcon}>
+                    <Popup>
+                      <div className="text-sm font-semibold">
+                        Start: {sourceLabel || 'Origin'}
+                      </div>
+                    </Popup>
+                  </Marker>
+                )}
+                {endPos && (
+                  <Marker position={[endPos.lat, endPos.lng]} icon={redIcon}>
+                    <Popup>
+                      <div className="text-sm font-semibold">
+                        Destination: {destinationLabel || 'Destination'}
+                      </div>
+                    </Popup>
+                  </Marker>
+                )}
+              </>
+            )}
+
+        {userLocation && (
+          <Marker
+            position={[userLocation.lat, userLocation.lng]}
+            icon={userLocationIcon}
+            zIndexOffset={1000}
+          >
             <Popup>
-              <div className="text-sm font-semibold">
-                Start: {sourceLabel || 'Origin'}
-              </div>
-            </Popup>
-          </Marker>
-        )}
-
-        {endPos && (
-          <Marker position={[endPos.lat, endPos.lng]} icon={redIcon}>
-            <Popup>
-              <div className="text-sm font-semibold">
-                Destination: {destinationLabel || 'Destination'}
-              </div>
+              <div className="text-sm font-semibold">You are here</div>
+              {userLocation.accuracy && (
+                <div className="text-xs text-gray-500 mt-1">
+                  Accuracy: {Math.round(userLocation.accuracy)}m
+                </div>
+              )}
             </Popup>
           </Marker>
         )}
