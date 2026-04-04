@@ -1,6 +1,20 @@
-import { useState } from 'react';
-import { LayoutDashboard, Route, Map, AlertTriangle, User, Bell, UserPlus, LogIn, GitCompare, History } from 'lucide-react';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/lib/auth-context';
 import { motion, AnimatePresence } from 'framer-motion';
+import {
+  LayoutDashboard,
+  Route,
+  Map,
+  GitCompare,
+  AlertTriangle,
+  History,
+  User,
+  Bell,
+  LogOut,
+  LogIn
+} from 'lucide-react';
+
 import DashboardScreen from '@/components/screens/DashboardScreen';
 import PlannerScreen from '@/components/screens/PlannerScreen';
 import LiveMapScreen from '@/components/screens/LiveMapScreen';
@@ -21,6 +35,13 @@ const navItems = [
 
 const AppLayout = () => {
   const [activeScreen, setActiveScreen] = useState('dashboard');
+  const navigate = useNavigate();
+  const { logout, user } = useAuth();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
 
   const renderScreen = () => {
     switch (activeScreen) {
@@ -56,11 +77,10 @@ const AppLayout = () => {
               <button
                 key={item.id}
                 onClick={() => setActiveScreen(item.id)}
-                className={`w-full flex items-center justify-between px-4 py-2.5 rounded-xl transition-all group ${
-                  isActive
-                    ? 'bg-[#1b3a2a] text-white shadow-md'
-                    : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'
-                }`}
+                className={`w-full flex items-center justify-between px-4 py-2.5 rounded-xl transition-all group ${isActive
+                  ? 'bg-[#1b3a2a] text-white shadow-md'
+                  : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'
+                  }`}
               >
                 <div className="flex items-center gap-3">
                   <item.icon
@@ -87,21 +107,21 @@ const AppLayout = () => {
                   <img src="https://i.pravatar.cc/150?u=a042581f4e29026704d" alt="User" className="w-full h-full object-cover" />
                 </div>
                 <div>
-                  <h4 className="text-sm font-bold text-gray-900">Alex Piter</h4>
+                  <h4 className="text-sm font-bold text-gray-900">{user?.name || 'Alex Piter'}</h4>
                 </div>
               </div>
               <Bell size={15} className="text-gray-400" />
             </div>
 
             <div className="flex flex-col gap-2">
-              <button className="w-full flex items-center justify-center gap-2 bg-[#c5f02c] text-[#1d2921] font-bold py-2.5 rounded-xl hover:bg-[#b5e025] transition-colors shadow-sm text-sm">
-                <UserPlus size={16} strokeWidth={2.5} />
-                Sign Up
+              <button
+                onClick={handleLogout}
+                className="w-full flex items-center justify-center gap-2 bg-[#ff4d4d] text-white font-bold py-2.5 rounded-xl hover:bg-[#ff3333] transition-colors shadow-sm text-sm"
+              >
+                <LogOut size={16} strokeWidth={2.5} />
+                Sign out
               </button>
-              <button className="w-full flex items-center justify-center gap-2 bg-gray-100 text-gray-700 font-bold py-2.5 rounded-xl hover:bg-gray-200 transition-colors shadow-sm text-sm">
-                <LogIn size={16} strokeWidth={2.5} />
-                Login
-              </button>
+
             </div>
           </div>
         </div>
@@ -129,9 +149,8 @@ const AppLayout = () => {
           <button
             key={item.id}
             onClick={() => setActiveScreen(item.id)}
-            className={`min-w-[56px] flex-1 flex flex-col items-center justify-center py-3 relative transition-colors ${
-              activeScreen === item.id ? 'text-[#1b3a2a]' : 'text-gray-400'
-            }`}
+            className={`min-w-[56px] flex-1 flex flex-col items-center justify-center py-3 relative transition-colors ${activeScreen === item.id ? 'text-[#1b3a2a]' : 'text-gray-400'
+              }`}
           >
             {activeScreen === item.id && (
               <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-[#1b3a2a] rounded-b-full" />
