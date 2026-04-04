@@ -1,0 +1,1570 @@
+// [
+//   {
+//     "id": 1,
+//     "type": "fastest",
+//     "from": "Andheri",
+//     "to": "Bandra",
+//     "steps": [
+//       {
+//         "mode": "metro",
+//         "line": "Line 1",
+//         "from": "Andheri",
+//         "to": "Ghatkopar",
+//         "time": 18,
+//         "cost": 30,
+//         "crowd": 6
+//       },
+//       {
+//         "mode": "train",
+//         "line": "Western Line",
+//         "from": "Ghatkopar",
+//         "to": "Bandra",
+//         "time": 10,
+//         "cost": 10,
+//         "crowd": 8
+//       },
+//       {
+//         "mode": "walk",
+//         "distance": "0.5 km",
+//         "time": 5,
+//         "cost": 0
+//       }
+//     ],
+//     "delayFactor": 2,
+//     "reliability": 85
+//   },
+//   {
+//     "id": 2,
+//     "type": "cheapest",
+//     "from": "Andheri",
+//     "to": "Bandra",
+//     "steps": [
+//       {
+//         "mode": "bus",
+//         "route": "BEST 310",
+//         "from": "Andheri East",
+//         "to": "Bandra Station",
+//         "time": 40,
+//         "cost": 15,
+//         "crowd": 7
+//       },
+//       {
+//         "mode": "walk",
+//         "distance": "0.8 km",
+//         "time": 10,
+//         "cost": 0
+//       }
+//     ],
+//     "delayFactor": 3,
+//     "reliability": 70
+//   },
+//   {
+//     "id": 3,
+//     "type": "comfort",
+//     "from": "Andheri",
+//     "to": "Bandra",
+//     "steps": [
+//       {
+//         "mode": "auto",
+//         "from": "Andheri",
+//         "to": "Bandra",
+//         "time": 25,
+//         "cost": 150,
+//         "comfort": 9
+//       }
+//     ],
+//     "delayFactor": 1,
+//     "reliability": 90
+//   },
+//   {
+//     "id": 4,
+//     "type": "balanced",
+//     "from": "Andheri",
+//     "to": "Dadar",
+//     "steps": [
+//       {
+//         "mode": "metro",
+//         "line": "Line 1",
+//         "from": "Andheri",
+//         "to": "Ghatkopar",
+//         "time": 20,
+//         "cost": 30,
+//         "crowd": 5
+//       },
+//       {
+//         "mode": "train",
+//         "line": "Central Line",
+//         "from": "Ghatkopar",
+//         "to": "Dadar",
+//         "time": 15,
+//         "cost": 10,
+//         "crowd": 8
+//       },
+//       {
+//         "mode": "auto",
+//         "distance": "1.2 km",
+//         "time": 8,
+//         "cost": 40
+//       }
+//     ],
+//     "delayFactor": 2,
+//     "reliability": 80
+//   },
+//   {
+//     "id": 5,
+//     "type": "fastest",
+//     "from": "Borivali",
+//     "to": "BKC",
+//     "steps": [
+//       {
+//         "mode": "train",
+//         "line": "Western Line",
+//         "from": "Borivali",
+//         "to": "Bandra",
+//         "time": 22,
+//         "cost": 15,
+//         "crowd": 9
+//       },
+//       {
+//         "mode": "auto",
+//         "from": "Bandra",
+//         "to": "BKC",
+//         "time": 12,
+//         "cost": 60
+//       }
+//     ],
+//     "delayFactor": 3,
+//     "reliability": 75
+//   }
+// ]
+
+[
+  {
+    "id": 1,
+    "type": "fastest",
+    "from": "Andheri",
+    "to": "Bandra",
+    "totalTime": 33,
+    "totalCost": 40,
+    "steps": [
+      {
+        "mode": "metro",
+        "line": "Line 1",
+        "from": "Andheri",
+        "to": "Ghatkopar",
+        "time": 18,
+        "cost": 30,
+        "crowd": 6
+      },
+      {
+        "mode": "train",
+        "line": "Western Line",
+        "from": "Ghatkopar",
+        "to": "Bandra",
+        "time": 10,
+        "cost": 10,
+        "crowd": 8
+      },
+      {
+        "mode": "walk",
+        "distance": "0.5 km",
+        "time": 5,
+        "cost": 0
+      }
+    ],
+    "delayFactor": 2,
+    "reliability": 85
+  },
+  {
+    "id": 2,
+    "type": "cheapest",
+    "from": "Andheri",
+    "to": "Bandra",
+    "totalTime": 50,
+    "totalCost": 15,
+    "steps": [
+      {
+        "mode": "bus",
+        "route": "BEST 310",
+        "from": "Andheri East",
+        "to": "Bandra Station",
+        "time": 40,
+        "cost": 15,
+        "crowd": 7
+      },
+      {
+        "mode": "walk",
+        "distance": "0.8 km",
+        "time": 10,
+        "cost": 0
+      }
+    ],
+    "delayFactor": 3,
+    "reliability": 70
+  },
+  {
+    "id": 3,
+    "type": "comfort",
+    "from": "Andheri",
+    "to": "Bandra",
+    "totalTime": 25,
+    "totalCost": 150,
+    "steps": [
+      {
+        "mode": "auto",
+        "from": "Andheri",
+        "to": "Bandra",
+        "time": 25,
+        "cost": 150,
+        "comfort": 9
+      }
+    ],
+    "delayFactor": 1,
+    "reliability": 90
+  },
+  {
+    "id": 4,
+    "type": "balanced",
+    "from": "Andheri",
+    "to": "Dadar",
+    "totalTime": 43,
+    "totalCost": 80,
+    "steps": [
+      {
+        "mode": "metro",
+        "line": "Line 1",
+        "from": "Andheri",
+        "to": "Ghatkopar",
+        "time": 20,
+        "cost": 30,
+        "crowd": 5
+      },
+      {
+        "mode": "train",
+        "line": "Central Line",
+        "from": "Ghatkopar",
+        "to": "Dadar",
+        "time": 15,
+        "cost": 10,
+        "crowd": 8
+      },
+      {
+        "mode": "auto",
+        "distance": "1.2 km",
+        "time": 8,
+        "cost": 40
+      }
+    ],
+    "delayFactor": 2,
+    "reliability": 80
+  },
+  {
+    "id": 5,
+    "type": "fastest",
+    "from": "Borivali",
+    "to": "BKC",
+    "totalTime": 34,
+    "totalCost": 75,
+    "steps": [
+      {
+        "mode": "train",
+        "line": "Western Line",
+        "from": "Borivali",
+        "to": "Bandra",
+        "time": 22,
+        "cost": 15,
+        "crowd": 9
+      },
+      {
+        "mode": "auto",
+        "from": "Bandra",
+        "to": "BKC",
+        "time": 12,
+        "cost": 60
+      }
+    ],
+    "delayFactor": 3,
+    "reliability": 75
+  },
+  {
+    "id": 6,
+    "type": "fastest",
+    "from": "Churchgate",
+    "to": "Dadar",
+    "totalTime": 17,
+    "totalCost": 10,
+    "steps": [
+      {
+        "mode": "train",
+        "line": "Western Line",
+        "from": "Churchgate",
+        "to": "Dadar",
+        "time": 14,
+        "cost": 10,
+        "crowd": 8
+      },
+      {
+        "mode": "walk",
+        "distance": "0.3 km",
+        "time": 3,
+        "cost": 0
+      }
+    ],
+    "delayFactor": 1,
+    "reliability": 92
+  },
+  {
+    "id": 7,
+    "type": "cheapest",
+    "from": "Borivali",
+    "to": "Churchgate",
+    "totalTime": 65,
+    "totalCost": 20,
+    "steps": [
+      {
+        "mode": "train",
+        "line": "Western Line",
+        "from": "Borivali",
+        "to": "Churchgate",
+        "time": 60,
+        "cost": 20,
+        "crowd": 9
+      },
+      {
+        "mode": "walk",
+        "distance": "0.2 km",
+        "time": 5,
+        "cost": 0
+      }
+    ],
+    "delayFactor": 2,
+    "reliability": 88
+  },
+  {
+    "id": 8,
+    "type": "comfort",
+    "from": "Borivali",
+    "to": "Churchgate",
+    "totalTime": 55,
+    "totalCost": 550,
+    "steps": [
+      {
+        "mode": "cab",
+        "provider": "Ola/Uber",
+        "from": "Borivali",
+        "to": "Churchgate",
+        "time": 55,
+        "cost": 550,
+        "comfort": 9
+      }
+    ],
+    "delayFactor": 4,
+    "reliability": 70
+  },
+  {
+    "id": 9,
+    "type": "balanced",
+    "from": "Malad",
+    "to": "BKC",
+    "totalTime": 45,
+    "totalCost": 85,
+    "steps": [
+      {
+        "mode": "train",
+        "line": "Western Line",
+        "from": "Malad",
+        "to": "Bandra",
+        "time": 25,
+        "cost": 15,
+        "crowd": 8
+      },
+      {
+        "mode": "metro",
+        "line": "Line 2A",
+        "from": "Bandra",
+        "to": "BKC",
+        "time": 12,
+        "cost": 30,
+        "crowd": 5
+      },
+      {
+        "mode": "walk",
+        "distance": "0.4 km",
+        "time": 8,
+        "cost": 0
+      }
+    ],
+    "delayFactor": 2,
+    "reliability": 82
+  },
+  {
+    "id": 10,
+    "type": "eco",
+    "from": "Bandra",
+    "to": "Worli",
+    "totalTime": 20,
+    "totalCost": 0,
+    "steps": [
+      {
+        "mode": "cycle",
+        "route": "Bandra-Worli Sea Link Road",
+        "from": "Bandra",
+        "to": "Worli",
+        "time": 20,
+        "cost": 0,
+        "crowd": 2
+      }
+    ],
+    "delayFactor": 0,
+    "reliability": 95
+  },
+  {
+    "id": 11,
+    "type": "fastest",
+    "from": "Thane",
+    "to": "CST",
+    "totalTime": 40,
+    "totalCost": 15,
+    "steps": [
+      {
+        "mode": "train",
+        "line": "Central Line",
+        "from": "Thane",
+        "to": "CST",
+        "time": 38,
+        "cost": 15,
+        "crowd": 9
+      },
+      {
+        "mode": "walk",
+        "distance": "0.2 km",
+        "time": 2,
+        "cost": 0
+      }
+    ],
+    "delayFactor": 2,
+    "reliability": 86
+  },
+  {
+    "id": 12,
+    "type": "cheapest",
+    "from": "Thane",
+    "to": "Dadar",
+    "totalTime": 55,
+    "totalCost": 12,
+    "steps": [
+      {
+        "mode": "train",
+        "line": "Central Line",
+        "from": "Thane",
+        "to": "Dadar",
+        "time": 48,
+        "cost": 12,
+        "crowd": 8
+      },
+      {
+        "mode": "walk",
+        "distance": "0.5 km",
+        "time": 7,
+        "cost": 0
+      }
+    ],
+    "delayFactor": 3,
+    "reliability": 80
+  },
+  {
+    "id": 13,
+    "type": "fastest",
+    "from": "Kurla",
+    "to": "Andheri",
+    "totalTime": 22,
+    "totalCost": 30,
+    "steps": [
+      {
+        "mode": "metro",
+        "line": "Line 1",
+        "from": "Kurla",
+        "to": "Andheri",
+        "time": 20,
+        "cost": 30,
+        "crowd": 6
+      },
+      {
+        "mode": "walk",
+        "distance": "0.3 km",
+        "time": 2,
+        "cost": 0
+      }
+    ],
+    "delayFactor": 1,
+    "reliability": 93
+  },
+  {
+    "id": 14,
+    "type": "balanced",
+    "from": "Kurla",
+    "to": "Worli",
+    "totalTime": 40,
+    "totalCost": 55,
+    "steps": [
+      {
+        "mode": "train",
+        "line": "Central Line",
+        "from": "Kurla",
+        "to": "Dadar",
+        "time": 18,
+        "cost": 10,
+        "crowd": 8
+      },
+      {
+        "mode": "bus",
+        "route": "BEST 507",
+        "from": "Dadar",
+        "to": "Worli",
+        "time": 15,
+        "cost": 10,
+        "crowd": 5
+      },
+      {
+        "mode": "walk",
+        "distance": "0.6 km",
+        "time": 7,
+        "cost": 0
+      }
+    ],
+    "delayFactor": 3,
+    "reliability": 74
+  },
+  {
+    "id": 15,
+    "type": "comfort",
+    "from": "BKC",
+    "to": "Nariman Point",
+    "totalTime": 30,
+    "totalCost": 320,
+    "steps": [
+      {
+        "mode": "cab",
+        "provider": "Ola/Uber",
+        "from": "BKC",
+        "to": "Nariman Point",
+        "time": 30,
+        "cost": 320,
+        "comfort": 10
+      }
+    ],
+    "delayFactor": 4,
+    "reliability": 72
+  },
+  {
+    "id": 16,
+    "type": "fastest",
+    "from": "BKC",
+    "to": "Nariman Point",
+    "totalTime": 28,
+    "totalCost": 80,
+    "steps": [
+      {
+        "mode": "metro",
+        "line": "Line 2B",
+        "from": "BKC",
+        "to": "Bandra",
+        "time": 10,
+        "cost": 30,
+        "crowd": 5
+      },
+      {
+        "mode": "train",
+        "line": "Western Line",
+        "from": "Bandra",
+        "to": "Churchgate",
+        "time": 12,
+        "cost": 10,
+        "crowd": 7
+      },
+      {
+        "mode": "bus",
+        "route": "BEST 103",
+        "from": "Churchgate",
+        "to": "Nariman Point",
+        "time": 6,
+        "cost": 10,
+        "crowd": 4
+      }
+    ],
+    "delayFactor": 2,
+    "reliability": 83
+  },
+  {
+    "id": 17,
+    "type": "cheapest",
+    "from": "Ghatkopar",
+    "to": "CST",
+    "totalTime": 48,
+    "totalCost": 10,
+    "steps": [
+      {
+        "mode": "train",
+        "line": "Central Line",
+        "from": "Ghatkopar",
+        "to": "CST",
+        "time": 42,
+        "cost": 10,
+        "crowd": 9
+      },
+      {
+        "mode": "walk",
+        "distance": "0.3 km",
+        "time": 6,
+        "cost": 0
+      }
+    ],
+    "delayFactor": 2,
+    "reliability": 87
+  },
+  {
+    "id": 18,
+    "type": "fastest",
+    "from": "Ghatkopar",
+    "to": "Andheri",
+    "totalTime": 22,
+    "totalCost": 30,
+    "steps": [
+      {
+        "mode": "metro",
+        "line": "Line 1",
+        "from": "Ghatkopar",
+        "to": "Andheri",
+        "time": 20,
+        "cost": 30,
+        "crowd": 6
+      },
+      {
+        "mode": "walk",
+        "distance": "0.2 km",
+        "time": 2,
+        "cost": 0
+      }
+    ],
+    "delayFactor": 1,
+    "reliability": 94
+  },
+  {
+    "id": 19,
+    "type": "balanced",
+    "from": "Kandivali",
+    "to": "Lower Parel",
+    "totalTime": 52,
+    "totalCost": 45,
+    "steps": [
+      {
+        "mode": "train",
+        "line": "Western Line",
+        "from": "Kandivali",
+        "to": "Dadar",
+        "time": 35,
+        "cost": 15,
+        "crowd": 8
+      },
+      {
+        "mode": "train",
+        "line": "Western Line",
+        "from": "Dadar",
+        "to": "Lower Parel",
+        "time": 8,
+        "cost": 10,
+        "crowd": 7
+      },
+      {
+        "mode": "walk",
+        "distance": "0.5 km",
+        "time": 9,
+        "cost": 0
+      }
+    ],
+    "delayFactor": 2,
+    "reliability": 81
+  },
+  {
+    "id": 20,
+    "type": "eco",
+    "from": "Andheri",
+    "to": "Jogeshwari",
+    "totalTime": 18,
+    "totalCost": 0,
+    "steps": [
+      {
+        "mode": "walk",
+        "distance": "2.2 km",
+        "time": 18,
+        "cost": 0
+      }
+    ],
+    "delayFactor": 0,
+    "reliability": 99
+  },
+  {
+    "id": 21,
+    "type": "fastest",
+    "from": "Dadar",
+    "to": "CST",
+    "totalTime": 16,
+    "totalCost": 10,
+    "steps": [
+      {
+        "mode": "train",
+        "line": "Central Line",
+        "from": "Dadar",
+        "to": "CST",
+        "time": 14,
+        "cost": 10,
+        "crowd": 8
+      },
+      {
+        "mode": "walk",
+        "distance": "0.2 km",
+        "time": 2,
+        "cost": 0
+      }
+    ],
+    "delayFactor": 1,
+    "reliability": 91
+  },
+  {
+    "id": 22,
+    "type": "comfort",
+    "from": "Andheri",
+    "to": "Lower Parel",
+    "totalTime": 35,
+    "totalCost": 380,
+    "steps": [
+      {
+        "mode": "cab",
+        "provider": "Ola/Uber",
+        "from": "Andheri",
+        "to": "Lower Parel",
+        "time": 35,
+        "cost": 380,
+        "comfort": 9
+      }
+    ],
+    "delayFactor": 5,
+    "reliability": 65
+  },
+  {
+    "id": 23,
+    "type": "fastest",
+    "from": "Andheri",
+    "to": "Lower Parel",
+    "totalTime": 32,
+    "totalCost": 40,
+    "steps": [
+      {
+        "mode": "train",
+        "line": "Western Line",
+        "from": "Andheri",
+        "to": "Lower Parel",
+        "time": 25,
+        "cost": 15,
+        "crowd": 8
+      },
+      {
+        "mode": "auto",
+        "from": "Lower Parel Station",
+        "to": "Lower Parel Business District",
+        "time": 7,
+        "cost": 25
+      }
+    ],
+    "delayFactor": 2,
+    "reliability": 84
+  },
+  {
+    "id": 24,
+    "type": "balanced",
+    "from": "Mulund",
+    "to": "BKC",
+    "totalTime": 55,
+    "totalCost": 65,
+    "steps": [
+      {
+        "mode": "train",
+        "line": "Central Line",
+        "from": "Mulund",
+        "to": "Kurla",
+        "time": 28,
+        "cost": 12,
+        "crowd": 7
+      },
+      {
+        "mode": "metro",
+        "line": "Line 1",
+        "from": "Kurla",
+        "to": "Ghatkopar",
+        "time": 5,
+        "cost": 20,
+        "crowd": 5
+      },
+      {
+        "mode": "auto",
+        "from": "Ghatkopar",
+        "to": "BKC",
+        "time": 22,
+        "cost": 80
+      }
+    ],
+    "delayFactor": 3,
+    "reliability": 73
+  },
+  {
+    "id": 25,
+    "type": "cheapest",
+    "from": "Mulund",
+    "to": "Dadar",
+    "totalTime": 58,
+    "totalCost": 12,
+    "steps": [
+      {
+        "mode": "train",
+        "line": "Central Line",
+        "from": "Mulund",
+        "to": "Dadar",
+        "time": 52,
+        "cost": 12,
+        "crowd": 9
+      },
+      {
+        "mode": "walk",
+        "distance": "0.4 km",
+        "time": 6,
+        "cost": 0
+      }
+    ],
+    "delayFactor": 2,
+    "reliability": 85
+  },
+  {
+    "id": 26,
+    "type": "fastest",
+    "from": "Vile Parle",
+    "to": "CST",
+    "totalTime": 38,
+    "totalCost": 15,
+    "steps": [
+      {
+        "mode": "train",
+        "line": "Western Line",
+        "from": "Vile Parle",
+        "to": "Churchgate",
+        "time": 32,
+        "cost": 15,
+        "crowd": 7
+      },
+      {
+        "mode": "bus",
+        "route": "BEST 70",
+        "from": "Churchgate",
+        "to": "CST",
+        "time": 6,
+        "cost": 10,
+        "crowd": 4
+      }
+    ],
+    "delayFactor": 2,
+    "reliability": 80
+  },
+  {
+    "id": 27,
+    "type": "eco",
+    "from": "Santacruz",
+    "to": "Vile Parle",
+    "totalTime": 14,
+    "totalCost": 0,
+    "steps": [
+      {
+        "mode": "cycle",
+        "from": "Santacruz",
+        "to": "Vile Parle",
+        "distance": "1.8 km",
+        "time": 14,
+        "cost": 0,
+        "crowd": 2
+      }
+    ],
+    "delayFactor": 0,
+    "reliability": 98
+  },
+  {
+    "id": 28,
+    "type": "comfort",
+    "from": "Powai",
+    "to": "BKC",
+    "totalTime": 22,
+    "totalCost": 250,
+    "steps": [
+      {
+        "mode": "cab",
+        "provider": "Ola/Uber",
+        "from": "Powai",
+        "to": "BKC",
+        "time": 22,
+        "cost": 250,
+        "comfort": 9
+      }
+    ],
+    "delayFactor": 2,
+    "reliability": 85
+  },
+  {
+    "id": 29,
+    "type": "cheapest",
+    "from": "Powai",
+    "to": "BKC",
+    "totalTime": 50,
+    "totalCost": 22,
+    "steps": [
+      {
+        "mode": "bus",
+        "route": "BEST 332",
+        "from": "Powai",
+        "to": "Kurla",
+        "time": 25,
+        "cost": 12,
+        "crowd": 6
+      },
+      {
+        "mode": "auto",
+        "from": "Kurla",
+        "to": "BKC",
+        "time": 18,
+        "cost": 70
+      },
+      {
+        "mode": "walk",
+        "distance": "0.3 km",
+        "time": 7,
+        "cost": 0
+      }
+    ],
+    "delayFactor": 3,
+    "reliability": 71
+  },
+  {
+    "id": 30,
+    "type": "fastest",
+    "from": "Goregaon",
+    "to": "Andheri",
+    "totalTime": 12,
+    "totalCost": 10,
+    "steps": [
+      {
+        "mode": "train",
+        "line": "Western Line",
+        "from": "Goregaon",
+        "to": "Andheri",
+        "time": 8,
+        "cost": 10,
+        "crowd": 7
+      },
+      {
+        "mode": "walk",
+        "distance": "0.4 km",
+        "time": 4,
+        "cost": 0
+      }
+    ],
+    "delayFactor": 1,
+    "reliability": 92
+  },
+  {
+    "id": 31,
+    "type": "balanced",
+    "from": "Goregaon",
+    "to": "BKC",
+    "totalTime": 48,
+    "totalCost": 75,
+    "steps": [
+      {
+        "mode": "train",
+        "line": "Western Line",
+        "from": "Goregaon",
+        "to": "Bandra",
+        "time": 20,
+        "cost": 15,
+        "crowd": 8
+      },
+      {
+        "mode": "metro",
+        "line": "Line 2B",
+        "from": "Bandra",
+        "to": "BKC",
+        "time": 12,
+        "cost": 30,
+        "crowd": 5
+      },
+      {
+        "mode": "walk",
+        "distance": "0.5 km",
+        "time": 8,
+        "cost": 0
+      }
+    ],
+    "delayFactor": 2,
+    "reliability": 82
+  },
+  {
+    "id": 32,
+    "type": "fastest",
+    "from": "CST",
+    "to": "Bandra",
+    "totalTime": 22,
+    "totalCost": 10,
+    "steps": [
+      {
+        "mode": "train",
+        "line": "Western Line",
+        "from": "CST",
+        "to": "Bandra",
+        "time": 18,
+        "cost": 10,
+        "crowd": 8
+      },
+      {
+        "mode": "walk",
+        "distance": "0.4 km",
+        "time": 4,
+        "cost": 0
+      }
+    ],
+    "delayFactor": 2,
+    "reliability": 88
+  },
+  {
+    "id": 33,
+    "type": "cheapest",
+    "from": "Chembur",
+    "to": "Dadar",
+    "totalTime": 38,
+    "totalCost": 10,
+    "steps": [
+      {
+        "mode": "train",
+        "line": "Harbour Line",
+        "from": "Chembur",
+        "to": "Wadala",
+        "time": 18,
+        "cost": 10,
+        "crowd": 6
+      },
+      {
+        "mode": "bus",
+        "route": "BEST 211",
+        "from": "Wadala",
+        "to": "Dadar",
+        "time": 15,
+        "cost": 10,
+        "crowd": 7
+      },
+      {
+        "mode": "walk",
+        "distance": "0.4 km",
+        "time": 5,
+        "cost": 0
+      }
+    ],
+    "delayFactor": 3,
+    "reliability": 72
+  },
+  {
+    "id": 34,
+    "type": "fastest",
+    "from": "Chembur",
+    "to": "Andheri",
+    "totalTime": 30,
+    "totalCost": 60,
+    "steps": [
+      {
+        "mode": "metro",
+        "line": "Line 2",
+        "from": "Chembur",
+        "to": "Andheri",
+        "time": 28,
+        "cost": 60,
+        "crowd": 5
+      },
+      {
+        "mode": "walk",
+        "distance": "0.2 km",
+        "time": 2,
+        "cost": 0
+      }
+    ],
+    "delayFactor": 1,
+    "reliability": 93
+  },
+  {
+    "id": 35,
+    "type": "eco",
+    "from": "Dadar",
+    "to": "Mahim",
+    "totalTime": 20,
+    "totalCost": 0,
+    "steps": [
+      {
+        "mode": "walk",
+        "distance": "2.5 km",
+        "time": 20,
+        "cost": 0
+      }
+    ],
+    "delayFactor": 0,
+    "reliability": 99
+  },
+  {
+    "id": 36,
+    "type": "balanced",
+    "from": "Vikhroli",
+    "to": "Bandra",
+    "totalTime": 50,
+    "totalCost": 55,
+    "steps": [
+      {
+        "mode": "train",
+        "line": "Central Line",
+        "from": "Vikhroli",
+        "to": "Kurla",
+        "time": 10,
+        "cost": 10,
+        "crowd": 7
+      },
+      {
+        "mode": "metro",
+        "line": "Line 1",
+        "from": "Kurla",
+        "to": "Andheri",
+        "time": 22,
+        "cost": 30,
+        "crowd": 5
+      },
+      {
+        "mode": "train",
+        "line": "Western Line",
+        "from": "Andheri",
+        "to": "Bandra",
+        "time": 10,
+        "cost": 10,
+        "crowd": 8
+      },
+      {
+        "mode": "walk",
+        "distance": "0.5 km",
+        "time": 8,
+        "cost": 0
+      }
+    ],
+    "delayFactor": 3,
+    "reliability": 74
+  },
+  {
+    "id": 37,
+    "type": "comfort",
+    "from": "Vikhroli",
+    "to": "BKC",
+    "totalTime": 25,
+    "totalCost": 280,
+    "steps": [
+      {
+        "mode": "cab",
+        "provider": "Ola/Uber",
+        "from": "Vikhroli",
+        "to": "BKC",
+        "time": 25,
+        "cost": 280,
+        "comfort": 9
+      }
+    ],
+    "delayFactor": 2,
+    "reliability": 84
+  },
+  {
+    "id": 38,
+    "type": "fastest",
+    "from": "Matunga",
+    "to": "CST",
+    "totalTime": 18,
+    "totalCost": 10,
+    "steps": [
+      {
+        "mode": "train",
+        "line": "Central Line",
+        "from": "Matunga",
+        "to": "CST",
+        "time": 16,
+        "cost": 10,
+        "crowd": 8
+      },
+      {
+        "mode": "walk",
+        "distance": "0.2 km",
+        "time": 2,
+        "cost": 0
+      }
+    ],
+    "delayFactor": 1,
+    "reliability": 90
+  },
+  {
+    "id": 39,
+    "type": "cheapest",
+    "from": "Borivali",
+    "to": "Dadar",
+    "totalTime": 55,
+    "totalCost": 18,
+    "steps": [
+      {
+        "mode": "train",
+        "line": "Western Line",
+        "from": "Borivali",
+        "to": "Dadar",
+        "time": 48,
+        "cost": 18,
+        "crowd": 9
+      },
+      {
+        "mode": "walk",
+        "distance": "0.4 km",
+        "time": 7,
+        "cost": 0
+      }
+    ],
+    "delayFactor": 2,
+    "reliability": 86
+  },
+  {
+    "id": 40,
+    "type": "fastest",
+    "from": "Khar",
+    "to": "Churchgate",
+    "totalTime": 25,
+    "totalCost": 10,
+    "steps": [
+      {
+        "mode": "train",
+        "line": "Western Line",
+        "from": "Khar",
+        "to": "Churchgate",
+        "time": 22,
+        "cost": 10,
+        "crowd": 7
+      },
+      {
+        "mode": "walk",
+        "distance": "0.3 km",
+        "time": 3,
+        "cost": 0
+      }
+    ],
+    "delayFactor": 1,
+    "reliability": 91
+  },
+  {
+    "id": 41,
+    "type": "balanced",
+    "from": "Thane",
+    "to": "BKC",
+    "totalTime": 65,
+    "totalCost": 80,
+    "steps": [
+      {
+        "mode": "train",
+        "line": "Central Line",
+        "from": "Thane",
+        "to": "Kurla",
+        "time": 35,
+        "cost": 12,
+        "crowd": 9
+      },
+      {
+        "mode": "auto",
+        "from": "Kurla",
+        "to": "BKC",
+        "time": 22,
+        "cost": 80
+      },
+      {
+        "mode": "walk",
+        "distance": "0.4 km",
+        "time": 8,
+        "cost": 0
+      }
+    ],
+    "delayFactor": 3,
+    "reliability": 72
+  },
+  {
+    "id": 42,
+    "type": "eco",
+    "from": "Bandra",
+    "to": "Khar",
+    "totalTime": 10,
+    "totalCost": 0,
+    "steps": [
+      {
+        "mode": "walk",
+        "distance": "1.2 km",
+        "time": 10,
+        "cost": 0
+      }
+    ],
+    "delayFactor": 0,
+    "reliability": 99
+  },
+  {
+    "id": 43,
+    "type": "fastest",
+    "from": "Bhandup",
+    "to": "Andheri",
+    "totalTime": 38,
+    "totalCost": 60,
+    "steps": [
+      {
+        "mode": "train",
+        "line": "Central Line",
+        "from": "Bhandup",
+        "to": "Ghatkopar",
+        "time": 12,
+        "cost": 10,
+        "crowd": 7
+      },
+      {
+        "mode": "metro",
+        "line": "Line 1",
+        "from": "Ghatkopar",
+        "to": "Andheri",
+        "time": 20,
+        "cost": 30,
+        "crowd": 6
+      },
+      {
+        "mode": "walk",
+        "distance": "0.3 km",
+        "time": 6,
+        "cost": 0
+      }
+    ],
+    "delayFactor": 2,
+    "reliability": 83
+  },
+  {
+    "id": 44,
+    "type": "comfort",
+    "from": "Juhu",
+    "to": "Nariman Point",
+    "totalTime": 45,
+    "totalCost": 450,
+    "steps": [
+      {
+        "mode": "cab",
+        "provider": "Ola/Uber",
+        "from": "Juhu",
+        "to": "Nariman Point",
+        "time": 45,
+        "cost": 450,
+        "comfort": 10
+      }
+    ],
+    "delayFactor": 5,
+    "reliability": 65
+  },
+  {
+    "id": 45,
+    "type": "cheapest",
+    "from": "Juhu",
+    "to": "Nariman Point",
+    "totalTime": 68,
+    "totalCost": 25,
+    "steps": [
+      {
+        "mode": "bus",
+        "route": "BEST 222",
+        "from": "Juhu",
+        "to": "Santacruz",
+        "time": 12,
+        "cost": 10,
+        "crowd": 5
+      },
+      {
+        "mode": "train",
+        "line": "Western Line",
+        "from": "Santacruz",
+        "to": "Churchgate",
+        "time": 28,
+        "cost": 15,
+        "crowd": 8
+      },
+      {
+        "mode": "bus",
+        "route": "BEST 103",
+        "from": "Churchgate",
+        "to": "Nariman Point",
+        "time": 10,
+        "cost": 10,
+        "crowd": 4
+      },
+      {
+        "mode": "walk",
+        "distance": "0.5 km",
+        "time": 8,
+        "cost": 0
+      }
+    ],
+    "delayFactor": 3,
+    "reliability": 69
+  },
+  {
+    "id": 46,
+    "type": "fastest",
+    "from": "Worli",
+    "to": "Nariman Point",
+    "totalTime": 18,
+    "totalCost": 175,
+    "steps": [
+      {
+        "mode": "auto",
+        "from": "Worli",
+        "to": "Nariman Point",
+        "time": 18,
+        "cost": 175
+      }
+    ],
+    "delayFactor": 3,
+    "reliability": 78
+  },
+  {
+    "id": 47,
+    "type": "balanced",
+    "from": "Sion",
+    "to": "Bandra",
+    "totalTime": 35,
+    "totalCost": 40,
+    "steps": [
+      {
+        "mode": "train",
+        "line": "Central Line",
+        "from": "Sion",
+        "to": "Dadar",
+        "time": 8,
+        "cost": 10,
+        "crowd": 8
+      },
+      {
+        "mode": "train",
+        "line": "Western Line",
+        "from": "Dadar",
+        "to": "Bandra",
+        "time": 8,
+        "cost": 10,
+        "crowd": 7
+      },
+      {
+        "mode": "auto",
+        "from": "Bandra Station",
+        "to": "Bandra West",
+        "time": 10,
+        "cost": 60
+      },
+      {
+        "mode": "walk",
+        "distance": "0.3 km",
+        "time": 5,
+        "cost": 0
+      }
+    ],
+    "delayFactor": 2,
+    "reliability": 80
+  },
+  {
+    "id": 48,
+    "type": "fastest",
+    "from": "Wadala",
+    "to": "CST",
+    "totalTime": 25,
+    "totalCost": 10,
+    "steps": [
+      {
+        "mode": "train",
+        "line": "Harbour Line",
+        "from": "Wadala",
+        "to": "CST",
+        "time": 20,
+        "cost": 10,
+        "crowd": 7
+      },
+      {
+        "mode": "walk",
+        "distance": "0.4 km",
+        "time": 5,
+        "cost": 0
+      }
+    ],
+    "delayFactor": 1,
+    "reliability": 90
+  },
+  {
+    "id": 49,
+    "type": "eco",
+    "from": "Lower Parel",
+    "to": "Worli",
+    "totalTime": 16,
+    "totalCost": 0,
+    "steps": [
+      {
+        "mode": "cycle",
+        "from": "Lower Parel",
+        "to": "Worli",
+        "distance": "2.0 km",
+        "time": 16,
+        "cost": 0,
+        "crowd": 2
+      }
+    ],
+    "delayFactor": 0,
+    "reliability": 97
+  },
+  {
+    "id": 50,
+    "type": "balanced",
+    "from": "Kanjurmarg",
+    "to": "Andheri",
+    "totalTime": 35,
+    "totalCost": 50,
+    "steps": [
+      {
+        "mode": "train",
+        "line": "Central Line",
+        "from": "Kanjurmarg",
+        "to": "Ghatkopar",
+        "time": 5,
+        "cost": 10,
+        "crowd": 6
+      },
+      {
+        "mode": "metro",
+        "line": "Line 1",
+        "from": "Ghatkopar",
+        "to": "Andheri",
+        "time": 20,
+        "cost": 30,
+        "crowd": 5
+      },
+      {
+        "mode": "walk",
+        "distance": "0.4 km",
+        "time": 10,
+        "cost": 0
+      }
+    ],
+    "delayFactor": 1,
+    "reliability": 89
+  }
+]

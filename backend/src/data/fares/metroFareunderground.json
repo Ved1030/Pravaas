@@ -1,0 +1,28 @@
+{
+    "slabs": [
+        {
+            "maxStations": 2,
+            "fare": 10
+        },
+        {
+            "maxStations": 4,
+            "fare": 20
+        },
+        {
+            "maxStations": 6,
+            "fare": 30
+        },
+        {
+            "maxStations": 9,
+            "fare": 40
+        },
+        {
+            "maxStations": 12,
+            "fare": 50
+        },
+        {
+            "maxStations": 20,
+            "fare": 60
+        }
+    ]
+}

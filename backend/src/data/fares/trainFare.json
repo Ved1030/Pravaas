@@ -1,0 +1,116 @@
+{
+    "secondClass": [
+        {
+            "minKm": 0,
+            "maxKm": 10,
+            "fare": 10
+        },
+        {
+            "minKm": 11,
+            "maxKm": 15,
+            "fare": 15
+        },
+        {
+            "minKm": 16,
+            "maxKm": 20,
+            "fare": 20
+        },
+        {
+            "minKm": 21,
+            "maxKm": 25,
+            "fare": 25
+        },
+        {
+            "minKm": 26,
+            "maxKm": 30,
+            "fare": 30
+        },
+        {
+            "minKm": 31,
+            "maxKm": 35,
+            "fare": 35
+        },
+        {
+            "minKm": 36,
+            "maxKm": 40,
+            "fare": 40
+        },
+        {
+            "minKm": 41,
+            "maxKm": 45,
+            "fare": 45
+        },
+        {
+            "minKm": 46,
+            "maxKm": 50,
+            "fare": 50
+        },
+        {
+            "minKm": 51,
+            "maxKm": 55,
+            "fare": 55
+        },
+        {
+            "minKm": 56,
+            "maxKm": 60,
+            "fare": 60
+        }
+    ],
+    "firstClass": [
+        {
+            "minKm": 0,
+            "maxKm": 10,
+            "fare": 50
+        },
+        {
+            "minKm": 11,
+            "maxKm": 15,
+            "fare": 60
+        },
+        {
+            "minKm": 16,
+            "maxKm": 20,
+            "fare": 70
+        },
+        {
+            "minKm": 21,
+            "maxKm": 25,
+            "fare": 80
+        },
+        {
+            "minKm": 26,
+            "maxKm": 30,
+            "fare": 90
+        },
+        {
+            "minKm": 31,
+            "maxKm": 35,
+            "fare": 100
+        },
+        {
+            "minKm": 36,
+            "maxKm": 40,
+            "fare": 110
+        },
+        {
+            "minKm": 41,
+            "maxKm": 45,
+            "fare": 120
+        },
+        {
+            "minKm": 46,
+            "maxKm": 50,
+            "fare": 130
+        },
+        {
+            "minKm": 51,
+            "maxKm": 55,
+            "fare": 140
+        },
+        {
+            "minKm": 56,
+            "maxKm": 60,
+            "fare": 150
+        }
+    ]
+}

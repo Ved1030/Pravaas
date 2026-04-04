@@ -1,0 +1,90 @@
+{
+    "Ghatkopar": {
+        "Jagruti Nagar": 10,
+        "Asalpha": 10,
+        "Saki Naka": 20,
+        "Marol Naka": 20,
+        "Airport Road": 30,
+        "Chakala": 30,
+        "WEH": 30,
+        "Andheri": 30,
+        "Azad Nagar": 40,
+        "DN Nagar": 40,
+        "Versova": 40
+    },
+    "Jagruti Nagar": {
+        "Asalpha": 10,
+        "Saki Naka": 20,
+        "Marol Naka": 20,
+        "Airport Road": 20,
+        "Chakala": 30,
+        "WEH": 30,
+        "Andheri": 30,
+        "Azad Nagar": 40,
+        "DN Nagar": 40,
+        "Versova": 40
+    },
+    "Asalpha": {
+        "Saki Naka": 10,
+        "Marol Naka": 10,
+        "Airport Road": 20,
+        "Chakala": 20,
+        "WEH": 30,
+        "Andheri": 30,
+        "Azad Nagar": 30,
+        "DN Nagar": 40,
+        "Versova": 40
+    },
+    "Saki Naka": {
+        "Marol Naka": 10,
+        "Airport Road": 10,
+        "Chakala": 20,
+        "WEH": 20,
+        "Andheri": 20,
+        "Azad Nagar": 30,
+        "DN Nagar": 30,
+        "Versova": 40
+    },
+    "Marol Naka": {
+        "Airport Road": 10,
+        "Chakala": 10,
+        "WEH": 20,
+        "Andheri": 20,
+        "Azad Nagar": 20,
+        "DN Nagar": 30,
+        "Versova": 40
+    },
+    "Airport Road": {
+        "Chakala": 10,
+        "WEH": 10,
+        "Andheri": 20,
+        "Azad Nagar": 20,
+        "DN Nagar": 30,
+        "Versova": 40
+    },
+    "Chakala": {
+        "WEH": 10,
+        "Andheri": 10,
+        "Azad Nagar": 20,
+        "DN Nagar": 20,
+        "Versova": 30
+    },
+    "WEH": {
+        "Andheri": 10,
+        "Azad Nagar": 10,
+        "DN Nagar": 20,
+        "Versova": 30
+    },
+    "Andheri": {
+        "Azad Nagar": 10,
+        "DN Nagar": 10,
+        "Versova": 20
+    },
+    "Azad Nagar": {
+        "DN Nagar": 10,
+        "Versova": 20
+    },
+    "DN Nagar": {
+        "Versova": 10
+    }
+}

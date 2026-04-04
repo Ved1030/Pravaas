@@ -1,0 +1,22 @@
+{
+    "line": "Metro Line 3",
+    "color": "aqua",
+    "stations": [
+        "Aarey JVLR",
+        "SEEPZ",
+        "MIDC Andheri",
+        "Marol Naka",
+        "CSMIA T2",
+        "Sahar Road",
+        "CSMIA T1",
+        "Santacruz",
+        "Bandra Colony",
+        "BKC",
+        "Dharavi",
+        "Shitala Devi Mandir",
+        "Dadar",
+        "Siddhivinayak",
+        "Worli",
+        "Acharya Atre Chowk"
+    ]
+}

@@ -1,0 +1,100 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+@import 'leaflet/dist/leaflet.css';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --bg-base: 60 20% 96%; /* #f9f8f2 */
+    --bg-elevated: 0 0% 100%;
+    --sidebar-bg: 0 0% 100%;
+    
+    --border-hard: 0 0% 85%;
+    --accent: 76 86% 55%; /* #c5f02c */
+    
+    --text-primary: 145 17% 14%; /* #1d2921 */
+    --text-secondary: 215 14% 34%; /* #4b5563 */
+    --text-muted: 210 10% 60%; /* #9ca3af */
+
+    --background: var(--bg-base);
+    --foreground: var(--text-primary);
+    --card: var(--bg-elevated);
+    --card-foreground: var(--text-primary);
+    --popover: var(--bg-elevated);
+    --popover-foreground: var(--text-primary);
+    --primary: var(--accent);
+    --primary-foreground: 0 0% 0%;
+    --secondary: 0 0% 96%;
+    --secondary-foreground: var(--text-primary);
+    --muted: 0 0% 96%;
+    --muted-foreground: var(--text-secondary);
+    --accent-color: var(--accent);
+    --accent-foreground: 0 0% 0%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: var(--border-hard);
+    --input: var(--border-hard);
+    --ring: var(--accent);
+    --radius: 1rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Outfit', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+.font-display {
+  font-family: 'Outfit', sans-serif;
+}
+
+.font-body {
+  font-family: 'Outfit', sans-serif;
+}
+
+/* Base custom styles */
+*:focus-visible {
+  outline: 2px solid hsl(var(--accent));
+  outline-offset: 2px;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: hsl(var(--bg-base));
+}
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--text-muted));
+  border-radius: 4px;
+}
+
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* ── Leaflet z-index scoping ────────────────────────────────────── */
+.leaflet-pane { z-index: 4 !important; }
+.leaflet-tile { z-index: 4 !important; }
+.leaflet-overlay-pane { z-index: 5 !important; }
+.leaflet-shadow-pane { z-index: 6 !important; }
+.leaflet-marker-pane { z-index: 7 !important; }
+.leaflet-tooltip-pane { z-index: 8 !important; }
+.leaflet-popup-pane { z-index: 9 !important; }
+.leaflet-map-pane canvas { z-index: 1 !important; }
+.leaflet-map-pane svg { z-index: 2 !important; }
+.leaflet-control-container .leaflet-top,
+.leaflet-control-container .leaflet-bottom { z-index: 10 !important; }

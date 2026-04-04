@@ -1,0 +1,32 @@
+{
+    "slabs": [
+        {
+            "minStations": 0,
+            "maxStations": 4,
+            "normalFare": 10,
+            "smartCardFare": 9,
+            "specialDayFare": 10
+        },
+        {
+            "minStations": 5,
+            "maxStations": 10,
+            "normalFare": 20,
+            "smartCardFare": 18,
+            "specialDayFare": 20
+        },
+        {
+            "minStations": 11,
+            "maxStations": 15,
+            "normalFare": 30,
+            "smartCardFare": 27,
+            "specialDayFare": 30
+        },
+        {
+            "minStations": 16,
+            "maxStations": 50,
+            "normalFare": 40,
+            "smartCardFare": 36,
+            "specialDayFare": 40
+        }
+    ]
+}

@@ -1,0 +1,57 @@
+{
+    "Dahisar East": {
+        "Ovaripada": 10,
+        "Rashtriya Udyan": 10,
+        "Borivali East": 10,
+        "Magathane": 20,
+        "Poisar": 20,
+        "Kandarpada": 20,
+        "Kurar": 20,
+        "Dindoshi": 30,
+        "Aarey": 30,
+        "Gundavali": 40,
+        "Andheri East": 40
+    },
+    "Borivali East": {
+        "Magathane": 10,
+        "Poisar": 20,
+        "Kurar": 20,
+        "Dindoshi": 20,
+        "Aarey": 30,
+        "Gundavali": 30,
+        "Andheri East": 40
+    },
+    "Magathane": {
+        "Poisar": 10,
+        "Kurar": 10,
+        "Dindoshi": 20,
+        "Aarey": 20,
+        "Gundavali": 30,
+        "Andheri East": 40
+    },
+    "Poisar": {
+        "Kurar": 10,
+        "Dindoshi": 10,
+        "Aarey": 20,
+        "Gundavali": 30,
+        "Andheri East": 40
+    },
+    "Kurar": {
+        "Dindoshi": 10,
+        "Aarey": 10,
+        "Gundavali": 20,
+        "Andheri East": 30
+    },
+    "Dindoshi": {
+        "Aarey": 10,
+        "Gundavali": 20,
+        "Andheri East": 30
+    },
+    "Aarey": {
+        "Gundavali": 10,
+        "Andheri East": 20
+    },
+    "Gundavali": {
+        "Andheri East": 10
+    }
+}
