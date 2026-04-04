@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import SegmentBar from '@/components/SegmentBar';
 import MapComponent, { type MapRoute, normalizeCoordinates } from '@/components/MapComponent';
-import { simulateDisruption, handleDisruption, type DisruptionResponse } from '@/lib/api';
+import { simulateDisruption, handleDisruption, type DisruptionResponse, type SmartSwitch } from '@/lib/api';
 
 const stagger: Variants = { hidden: {}, show: { transition: { staggerChildren: 0.08 } } };
 const fadeUp: Variants = {
@@ -69,6 +69,7 @@ const DisruptionsScreen = () => {
 
   const [mapRoutes, setMapRoutes] = useState<MapRoute[]>([]);
   const [selectedMapRouteId, setSelectedMapRouteId] = useState<string | undefined>();
+  const [activatedSmartSwitch, setActivatedSmartSwitch] = useState(false);
 
   const triggerDisruption = async () => {
     const now = new Date().toLocaleTimeString('en-US', { hour12: false });
@@ -143,11 +144,15 @@ const DisruptionsScreen = () => {
       setDisruptionData(data);
 
       const now = new Date().toLocaleTimeString('en-US', { hour12: false });
+      const switchMsg = data.smartSwitch
+        ? `Smart Switch: ${data.smartSwitch.label} saves ${data.smartSwitch.timeSaved}m & ₹${data.smartSwitch.costSaved} (${data.smartSwitch.confidence}% confidence)`
+        : `${data.switchOptions.length} switch options found`;
       setLogs((prev) => [
         { time: now, type: 'trigger', text: `Disruption: ${source} → ${destination} (+${data.summary.totalDelay} min)` },
-        { time: now, type: 'reroute', text: `${data.switchOptions.length} switch options, ${data.lastMile.length} last-mile options found` },
+        { time: now, type: 'reroute', text: switchMsg },
         ...prev,
       ]);
+      setActivatedSmartSwitch(false);
 
       if (data.disruptedRoute.geometry && Array.isArray(data.disruptedRoute.geometry) && data.disruptedRoute.geometry.length > 0) {
         const disruptedRoute: MapRoute = {
@@ -172,6 +177,27 @@ const DisruptionsScreen = () => {
 
   const selectSwitchOption = (mode: string) => {
     setSelectedSwitchOption(mode);
+  };
+
+  /** Apply the smart switch — replace the map route with the alternative route's geometry */
+  const applySmartSwitch = (sw: SmartSwitch) => {
+    setActivatedSmartSwitch(true);
+    const geom = sw.alternativeRoute?.geometry;
+    if (geom && Array.isArray(geom) && geom.length > 0) {
+      const altRoute: MapRoute = {
+        id: 'smart-switch',
+        type: sw.alternativeRoute.type || 'fastest',
+        color: '#10b981',
+        positions: normalizeCoordinates(geom),
+      };
+      setMapRoutes([altRoute]);
+      setSelectedMapRouteId('smart-switch');
+    }
+    const now = new Date().toLocaleTimeString('en-US', { hour12: false });
+    setLogs((prev) => [
+      { time: now, type: 'reroute', text: `Switched to ${sw.label} — saving ${sw.timeSaved} min & ₹${sw.costSaved}` },
+      ...prev,
+    ]);
   };
 
   return (
@@ -381,6 +407,103 @@ const DisruptionsScreen = () => {
                         </motion.div>
                       );
                     })}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* ── Smart Switch Card ── */}
+          <AnimatePresence>
+            {disruptionData?.smartSwitch && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="bg-white rounded-[28px] shadow-md border-2 border-emerald-200 overflow-hidden relative"
+              >
+                <div className="absolute -top-10 -right-10 w-40 h-40 bg-emerald-400/10 rounded-full blur-3xl pointer-events-none" />
+
+                <div className="p-7 relative z-10">
+                  <div className="flex items-center gap-2 mb-5">
+                    <div className="bg-emerald-600 text-white px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5">
+                      <Sparkles size={12} strokeWidth={3} />
+                      Smart Switch Available
+                    </div>
+                    {activatedSmartSwitch && (
+                      <span className="bg-emerald-100 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-lg text-[10px] font-bold">
+                        ACTIVE
+                      </span>
+                    )}
+                  </div>
+
+                  {(() => {
+                    const sw = disruptionData.smartSwitch!;
+                    const Icon = modeIcons[sw.mode] || AlertTriangle;
+                    const confidencePct = Math.max(0, Math.min(100, sw.confidence));
+                    const confColor = confidencePct >= 85 ? 'bg-emerald-500' : confidencePct >= 70 ? 'bg-amber-400' : 'bg-red-400';
+                    const confText = confidencePct >= 85 ? 'text-emerald-600' : confidencePct >= 70 ? 'text-amber-600' : 'text-red-600';
+
+                    return (
+                      <div className={`rounded-[24px] p-5 border ${activatedSmartSwitch ? 'bg-emerald-50 border-emerald-300' : 'bg-gray-50 border-gray-100'}`}>
+                        <div className="flex items-center gap-4 mb-4">
+                          <div className={`w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0 ${activatedSmartSwitch ? 'bg-emerald-100 border border-emerald-200' : 'bg-white border border-gray-200'}`}>
+                            <Icon size={18} className={activatedSmartSwitch ? 'text-emerald-600' : 'text-gray-600'} strokeWidth={2.5} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-bold text-sm text-gray-900">
+                              Switch to {modeLabels[sw.mode] || sw.label}
+                            </p>
+                            <p className="text-xs text-gray-500 mt-0.5">{sw.reason}</p>
+                          </div>
+                        </div>
+
+                        {/* Savings row */}
+                        <div className="grid grid-cols-3 gap-3 mb-4">
+                          <div className="bg-white/80 rounded-2xl p-3 text-center border border-gray-100">
+                            <p className="text-base font-bold text-emerald-600 tabular-nums">-{sw.timeSaved}m</p>
+                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mt-0.5">Time Saved</p>
+                          </div>
+                          <div className="bg-white/80 rounded-2xl p-3 text-center border border-gray-100">
+                            <p className="text-base font-bold text-emerald-600 tabular-nums">
+                              {sw.costSaved > 0 ? `-₹${sw.costSaved}` : '–'}
+                            </p>
+                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mt-0.5">Cost Saved</p>
+                          </div>
+                          <div className="bg-white/80 rounded-2xl p-3 text-center border border-gray-100">
+                            <p className={`text-base font-bold tabular-nums ${confText}`}>{confidencePct}%</p>
+                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mt-0.5">Confidence</p>
+                          </div>
+                        </div>
+
+                        {/* Confidence bar */}
+                        <div className="mb-4">
+                          <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                            <motion.div
+                              className={`h-full rounded-full ${confColor}`}
+                              initial={{ width: 0 }}
+                              animate={{ width: `${confidencePct}%` }}
+                              transition={{ duration: 0.8, ease: 'easeOut', delay: 0.2 }}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Switch Route button */}
+                        <motion.button
+                          whileHover={{ scale: 1.01 }}
+                          whileTap={{ scale: 0.98 }}
+                          onClick={() => applySmartSwitch(sw)}
+                          disabled={activatedSmartSwitch}
+                          className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-bold text-sm flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                        >
+                          {activatedSmartSwitch ? (
+                            <><CheckCircle2 size={16} strokeWidth={2.5} /> Route Switched</>
+                          ) : (
+                            <><Shuffle size={16} strokeWidth={2.5} /> Switch Route — Save {sw.timeSaved} min &amp; ₹{sw.costSaved}</>
+                          )}
+                        </motion.button>
+                      </div>
+                    );
+                  })()}
                 </div>
               </motion.div>
             )}

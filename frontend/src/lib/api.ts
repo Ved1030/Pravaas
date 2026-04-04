@@ -135,6 +135,16 @@ export interface DisruptedRoute {
   estimatedCost?: number;
 }
 
+export interface SmartSwitch {
+  mode: string;
+  label: string;
+  timeSaved: number;
+  costSaved: number;
+  confidence: number;
+  reason: string;
+  alternativeRoute: any;
+}
+
 export interface DisruptionResponse {
   alert: string;
   issueType?: string;
@@ -144,6 +154,7 @@ export interface DisruptionResponse {
   disruptedRoute: DisruptedRoute;
   disruptedSteps: DisruptionStep[];
   switchOptions: SwitchOption[];
+  smartSwitch?: SmartSwitch | null;
   lastMile: LastMileOption[];
   summary: DisruptionSummary;
 }

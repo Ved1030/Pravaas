@@ -118,7 +118,52 @@ function enrichLastMileWithPricing(options, distanceKm) {
   });
 }
 
-function handleDisruption(input, route) {
+/**
+ * Score each alternative route against the disrupted current route.
+ * Returns the best switch recommendation only when it saves real time.
+ */
+function generateSmartSwitch(currentRoute, alternativeRoutes) {
+  if (!alternativeRoutes || alternativeRoutes.length === 0) return null;
+
+  const currentTime = currentRoute.totalTime || currentRoute.durationMin || 0;
+  const currentCost = currentRoute.estimatedCost || currentRoute.totalCost || 0;
+
+  const bestOption = alternativeRoutes.reduce((best, route) => {
+    const altTime = route.totalTime || route.durationMin || 0;
+    const altCost = route.estimatedCost || route.totalCost || 0;
+
+    const timeSaved = currentTime - altTime;
+    const costSaved = currentCost - altCost;
+    const score = timeSaved * 2 + costSaved;
+
+    if (!best || score > best.score) {
+      return { route, timeSaved, costSaved, score };
+    }
+    return best;
+  }, null);
+
+  // Only recommend when there is a measurable time benefit
+  if (!bestOption || bestOption.timeSaved <= 0) return null;
+
+  const confidence = Math.min(95, Math.round(60 + Math.max(0, bestOption.score)));
+
+  return {
+    mode: bestOption.route.steps?.[0]?.mode || bestOption.route.type || "unknown",
+    label: bestOption.route.label || bestOption.route.type || "Alternative",
+    timeSaved: Math.round(bestOption.timeSaved),
+    costSaved: Math.round(bestOption.costSaved),
+    confidence,
+    reason: "Faster and more efficient alternative detected",
+    alternativeRoute: bestOption.route,
+  };
+}
+
+/**
+ * @param {object} input  - { source, destination, currentLocation, issueType }
+ * @param {object} route  - The currently disrupted route (best route from engine)
+ * @param {Array}  allRoutes - All route variants returned by the engine [fastest, cheapest, comfort]
+ */
+function handleDisruption(input, route, allRoutes = []) {
   const disruptedSteps = simulateDisruption(route);
 
   const totalDelay = disruptedSteps.reduce((sum, s) => sum + (s.delayMinutes || 0), 0);
@@ -144,10 +189,15 @@ function handleDisruption(input, route) {
     totalDelay,
   };
 
+  // Build smart switch from real alternative routes (exclude the current one)
+  const alternativeRoutes = allRoutes.filter((r) => r.id !== route.id);
+  const smartSwitch = generateSmartSwitch(disruptedRoute, alternativeRoutes);
+
   return {
     disruptedRoute,
     disruptedSteps,
     switchOptions,
+    smartSwitch,
     lastMile,
     summary: {
       totalDelay,
@@ -160,6 +210,7 @@ function handleDisruption(input, route) {
 
 module.exports = {
   simulateDisruption,
+  generateSmartSwitch,
   getCurrentSwitchOptions,
   getLastMileOptions,
   handleDisruption,

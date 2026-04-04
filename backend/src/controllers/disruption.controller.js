@@ -51,7 +51,8 @@ exports.handleDisruption = async (req, res) => {
 
     const result = disruptionService.handleDisruption(
       { source, destination, currentLocation, issueType },
-      bestRoute
+      bestRoute,
+      routeData.routes   // pass all variants so smart-switch can score alternatives
     );
 
     res.json({
