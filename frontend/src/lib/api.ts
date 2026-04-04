@@ -7,12 +7,14 @@ export interface RouteResource {
 }
 
 export interface RouteStep {
-  mode: 'walk' | 'metro' | 'bus' | 'train' | 'cab' | 'auto';
+  mode: 'walk' | 'metro' | 'bus' | 'train' | 'cab' | 'auto' | 'drive';
   label: string;
   duration: number;
   distance: string;
   cost: number;
   delay?: number;
+  instruction?: string;
+  voiceText?: string;
 }
 
 export interface BackendRoute {
@@ -31,6 +33,9 @@ export interface BackendRoute {
   distanceKm: number;
   resources: RouteResource[];
   steps: RouteStep[];
+  // Multi-stop fields
+  segmentGeometries?: [number, number][][];
+  stopCoordinates?: { from: { lat: number; lng: number }; to: { lat: number; lng: number } }[];
 }
 
 export interface AIRecommendation {
@@ -53,13 +58,15 @@ export interface RoutePlanResponse {
   generatedAt?: string;
   routes: BackendRoute[];
   recommended: AIRecommendation;
+  waypoints?: string[];
+  stopLabels?: string[];
 }
 
-export async function planRoute(source: string, destination: string, preferences?: { speed: number; cost: number; comfort: number }): Promise<RoutePlanResponse> {
+export async function planRoute(source: string, destination: string, preferences?: { speed: number; cost: number; comfort: number }, stops?: string[], sourceCoords?: { lat: number; lng: number }): Promise<RoutePlanResponse> {
   const res = await fetch(`${BASE_URL}/route/plan`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ source, destination, preferences }),
+    body: JSON.stringify({ source, destination, preferences, stops, sourceCoords }),
   });
   if (!res.ok) throw new Error(`planRoute failed: ${res.status}`);
   const data = await res.json();
@@ -160,5 +167,24 @@ export async function handleDisruption(input: {
 export async function getAllRoutes(): Promise<any[]> {
   const res = await fetch(`${BASE_URL}/routes`);
   if (!res.ok) throw new Error(`getAllRoutes failed: ${res.status}`);
+  return res.json();
+}
+
+export interface VoiceInstruction {
+  stepIndex: number;
+  text: string;
+  audio: string;
+  mode: string;
+  distance: string;
+  duration: number;
+}
+
+export async function getVoiceInstructions(route: BackendRoute): Promise<{ instructions: VoiceInstruction[] }> {
+  const res = await fetch(`${BASE_URL}/voice/instructions`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ route }),
+  });
+  if (!res.ok) throw new Error(`getVoiceInstructions failed: ${res.status}`);
   return res.json();
 }

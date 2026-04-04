@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import {
   MapPin,
@@ -25,9 +25,15 @@ import {
   Plus,
   X,
   Navigation,
+  Play,
+  Square,
+  Volume2,
+  VolumeX,
+  LocateFixed,
+  Locate,
 } from 'lucide-react';
-import { planRoute, type BackendRoute, type RouteResource, type AIRecommendation } from '@/lib/api';
-import MapComponent, { type LatLng, type MapRoute, normalizeCoordinates } from '@/components/MapComponent';
+import { planRoute, getVoiceInstructions, type BackendRoute, type RouteResource, type AIRecommendation, type VoiceInstruction } from '@/lib/api';
+import MapComponent, { type LatLng, type MapRoute, type MapStop, type UserLocation, normalizeCoordinates } from '@/components/MapComponent';
 import { LIVE_LOCATION_KEY } from '@/components/ui/LiveLocationCard';
 
 type StoredLiveLocation = {
@@ -62,6 +68,19 @@ async function geocodeLocation(query: string): Promise<LatLng> {
   return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
 }
 
+function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371000;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLng / 2) *
+      Math.sin(dLng / 2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 const routeColors: Record<string, string> = {
   fastest: '#22c55e',
   cheapest: '#3b82f6',
@@ -71,13 +90,19 @@ const routeColors: Record<string, string> = {
 function buildRoutesFromBackend(routes: BackendRoute[], recommendedId?: string): MapRoute[] {
   if (!routes || !Array.isArray(routes)) return [];
   return routes
-    .filter((r) => r && r.geometry && Array.isArray(r.geometry) && r.geometry.length > 0)
-    .map((r) => ({
-      id: r.id,
-      type: r.type,
-      color: routeColors[r.type] || '#888',
-      positions: normalizeCoordinates(r.geometry),
-    }));
+    .filter((r) => r && r.geometry && Array.isArray(r.geometry) && r.geometry.length > 1)
+    .map((r) => {
+      // normalizeCoordinates converts OSRM [lng, lat] → Leaflet [lat, lng]
+      const positions = normalizeCoordinates(r.geometry);
+      console.log('OSRM coords (raw):', r.geometry.slice(0, 5));
+      console.log('Leaflet coords (normalized):', positions.slice(0, 5));
+      return {
+        id: r.id,
+        type: r.type,
+        color: routeColors[r.type] || '#888',
+        positions,
+      };
+    });
 }
 
 const stagger: Variants = { hidden: {}, show: { transition: { staggerChildren: 0.08 } } };
@@ -210,12 +235,14 @@ function RouteCard({
   );
 }
 
+const PROXIMITY_THRESHOLD = 200;
+
 const LiveMapScreen = () => {
   const storedLiveLocation = readLiveLocationFromSession();
 
   const [source, setSource] = useState(() => storedLiveLocation?.area || storedLiveLocation?.address || '');
+  const [sourceCoords, setSourceCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [destination, setDestination] = useState('');
-  // Multi-stop state: array of intermediate stop strings
   const [stops, setStops] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -226,6 +253,29 @@ const LiveMapScreen = () => {
   const [mapRoutes, setMapRoutes] = useState<MapRoute[]>([]);
   const [geoError, setGeoError] = useState<string | null>(null);
 
+  const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
+  const [navigationMode, setNavigationMode] = useState(false);
+  const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  const [currentSegmentIndex, setCurrentSegmentIndex] = useState(0);
+  const [voiceInstructions, setVoiceInstructions] = useState<VoiceInstruction[]>([]);
+  const [voiceEnabled, setVoiceEnabled] = useState(true);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [mapStops, setMapStops] = useState<MapStop[]>([]);
+  const [segmentGeometries, setSegmentGeometries] = useState<[number, number][][]>([]);
+  const [waypoints, setWaypoints] = useState<string[]>([]);
+
+  const speechQueueRef = useRef<number[]>([]);
+  const stepDetectionRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (stepDetectionRef.current !== null) {
+        clearInterval(stepDetectionRef.current);
+      }
+      speechSynthesis.cancel();
+    };
+  }, []);
+
   const handleSwap = () => {
     setSource(destination);
     setDestination(source);
@@ -234,6 +284,10 @@ const LiveMapScreen = () => {
     setSelectedRoute(null);
     setMapRoutes([]);
     setRecommended(null);
+    setMapStops([]);
+    setSegmentGeometries([]);
+    setWaypoints([]);
+    stopNavigation();
   };
 
   const addStop = () => {
@@ -256,9 +310,166 @@ const LiveMapScreen = () => {
     setSelectedRoute(null);
   };
 
+  const handleUseCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      setError('Geolocation is not supported by your browser.');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude, longitude } = pos.coords;
+        setSourceCoords({ lat: latitude, lng: longitude });
+        setSource('Current Location');
+        setUserLocation({ lat: latitude, lng: longitude, accuracy: pos.coords.accuracy });
+        setLoading(false);
+      },
+      (err) => {
+        console.error('Location error:', err);
+        if (err.code === 1) {
+          setError('Location access denied. Please enable location permissions.');
+        } else if (err.code === 2) {
+          setError('Location unavailable. Please check your device settings.');
+        } else {
+          setError('Location request timed out. Please try again.');
+        }
+        setLoading(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+  };
+
+  const handleUserLocationChange = useCallback((loc: UserLocation) => {
+    setUserLocation(loc);
+  }, []);
+
+  const detectCurrentStep = useCallback((loc: UserLocation, activeRoute: BackendRoute | undefined) => {
+    if (!activeRoute || !activeRoute.steps || activeRoute.steps.length === 0) return;
+
+    const steps = activeRoute.steps;
+    let closestIdx = 0;
+    let closestDist = Infinity;
+
+    for (let i = 0; i < steps.length; i++) {
+      const step = steps[i];
+      const stepStartIdx = Math.floor((i / steps.length) * activeRoute.geometry.length);
+      const stepEndIdx = Math.floor(((i + 1) / steps.length) * activeRoute.geometry.length);
+
+      if (stepStartIdx < 0 || stepEndIdx > activeRoute.geometry.length) continue;
+
+      for (let j = stepStartIdx; j < Math.min(stepEndIdx, activeRoute.geometry.length); j++) {
+        const coord = activeRoute.geometry[j];
+        const [lat, lng] = normalizeCoordinates([coord])[0] || coord;
+        const dist = haversineDistance(loc.lat, loc.lng, lat, lng);
+        if (dist < closestDist) {
+          closestDist = dist;
+          closestIdx = i;
+        }
+      }
+    }
+
+    if (closestIdx !== currentStepIndex) {
+      setCurrentStepIndex(closestIdx);
+      if (voiceEnabled && voiceInstructions.length > 0) {
+        speakInstruction(closestIdx);
+      }
+    }
+
+    if (segmentGeometries.length > 0) {
+      let segIdx = 0;
+      let cumulative = 0;
+      for (let s = 0; s < segmentGeometries.length; s++) {
+        cumulative += segmentGeometries[s].length;
+        if (closestIdx < cumulative) {
+          segIdx = s;
+          break;
+        }
+      }
+      if (segIdx !== currentSegmentIndex) {
+        setCurrentSegmentIndex(segIdx);
+      }
+    }
+  }, [currentStepIndex, currentSegmentIndex, voiceEnabled, voiceInstructions, segmentGeometries]);
+
+  const speakInstruction = useCallback((index: number) => {
+    speechSynthesis.cancel();
+    const instr = voiceInstructions[index];
+    if (!instr || !voiceEnabled) return;
+
+    const text = instr.text;
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'en-IN';
+    utterance.rate = 0.95;
+    utterance.pitch = 1;
+
+    utterance.onstart = () => setIsSpeaking(true);
+    utterance.onend = () => setIsSpeaking(false);
+    utterance.onerror = () => setIsSpeaking(false);
+
+    speechSynthesis.speak(utterance);
+  }, [voiceInstructions, voiceEnabled]);
+
+  const startNavigation = useCallback(() => {
+    const activeRoute = routes.find((r) => r.id === selectedRoute);
+    if (!activeRoute) return;
+
+    console.log('Stops:', stops);
+    console.log('Segments:', activeRoute.segmentGeometries ? activeRoute.segmentGeometries.length : 0);
+
+    setNavigationMode(true);
+    setCurrentStepIndex(0);
+    setCurrentSegmentIndex(0);
+
+    if (segmentGeometries.length === 0 && activeRoute.segmentGeometries) {
+      const segs = activeRoute.segmentGeometries as [number, number][][];
+      setSegmentGeometries(segs);
+    }
+
+    if (activeRoute.steps && activeRoute.steps.length > 0) {
+      const navSteps = activeRoute.steps.map((step, idx) => ({
+        stepIndex: idx,
+        text: step.voiceText || step.label || step.instruction || `Step ${idx + 1}`,
+        audio: '',
+        mode: step.mode,
+        distance: step.distance,
+        duration: step.duration,
+      }));
+      setVoiceInstructions(navSteps);
+
+      if (voiceEnabled && navSteps.length > 0) {
+        speakInstruction(0);
+      }
+    }
+
+    stepDetectionRef.current = setInterval(() => {
+      const loc = userLocation;
+      if (loc) {
+        detectCurrentStep(loc, activeRoute);
+      }
+    }, 5000);
+  }, [routes, selectedRoute, segmentGeometries, voiceEnabled, userLocation, detectCurrentStep, speakInstruction, stops]);
+
+  const stopNavigation = useCallback(() => {
+    setNavigationMode(false);
+    setCurrentStepIndex(0);
+    setCurrentSegmentIndex(0);
+    setVoiceInstructions([]);
+    setIsSpeaking(false);
+    speechSynthesis.cancel();
+
+    if (stepDetectionRef.current !== null) {
+      clearInterval(stepDetectionRef.current);
+      stepDetectionRef.current = null;
+    }
+  }, []);
+
   const handleSearch = async () => {
     const src = source.trim();
     const dst = destination.trim();
+    const filteredStops = stops.filter((s) => s && s.trim());
 
     const storedLabel = storedLiveLocation?.area || storedLiveLocation?.address || '';
     const canUseStoredOrigin = !!storedLiveLocation && (!src || src.toLowerCase() === storedLabel.toLowerCase());
@@ -274,15 +485,34 @@ const LiveMapScreen = () => {
     setRoutes([]);
     setSelectedRoute(null);
     setMapRoutes([]);
+    setMapStops([]);
+    setSegmentGeometries([]);
+    stopNavigation();
 
     try {
-      const originPromise: Promise<LatLng> = canUseStoredOrigin
-        ? Promise.resolve({ lat: storedLiveLocation!.lat, lng: storedLiveLocation!.lng })
-        : geocodeLocation(src);
+      const originLabel = sourceCoords ? 'Current Location' : (src || storedLiveLocation?.area || storedLiveLocation?.address || 'Current location');
+      const filteredStops = stops.filter((s) => s && s.trim());
+      const allWaypoints = [originLabel, ...filteredStops, dst];
+
+      console.log('User location:', userLocation);
+      console.log('Source coords:', sourceCoords);
+      console.log('Stops:', filteredStops);
+      console.log('All waypoints:', allWaypoints);
 
       const [routeData, geoResult] = await Promise.allSettled([
-        planRoute(src || storedLiveLocation?.area || storedLiveLocation?.address || 'Current location', dst),
-        Promise.all([originPromise, geocodeLocation(dst)]),
+        planRoute(originLabel, dst, undefined, filteredStops, sourceCoords ? { lat: sourceCoords.lat, lng: sourceCoords.lng } : undefined),
+        Promise.all(
+          allWaypoints.map(async (wp, wpIdx) => {
+            if (wpIdx === 0 && sourceCoords) {
+              return sourceCoords;
+            }
+            try {
+              return await geocodeLocation(wp);
+            } catch {
+              return null;
+            }
+          })
+        ),
       ]);
 
       if (routeData.status === 'fulfilled') {
@@ -295,12 +525,46 @@ const LiveMapScreen = () => {
         setDistanceKm(resp?.distanceKm || 0);
         setRecommended(resp?.recommended || null);
         setMapRoutes(buildRoutesFromBackend(backendRoutes, recId));
+
+        if (resp.waypoints && resp.waypoints.length > 2) {
+          setWaypoints(resp.waypoints);
+        }
+
+        const firstRoute = backendRoutes[0];
+        if (firstRoute?.segmentGeometries) {
+          // segmentGeometries from backend are raw OSRM [lng, lat] — MapComponent normalizes them
+          const segs = firstRoute.segmentGeometries as [number, number][][];
+          setSegmentGeometries(segs);
+        }
+
+        const geoCoords = geoResult.status === 'fulfilled' ? geoResult.value : [];
+        const validCoords = geoCoords.filter(Boolean) as LatLng[];
+
+        if (validCoords.length >= 2) {
+          const newStops: MapStop[] = [];
+          validCoords.forEach((coord, idx) => {
+            const isStart = idx === 0;
+            const isDest = idx === validCoords.length - 1;
+            const isIntermediate = !isStart && !isDest;
+
+            newStops.push({
+              label: isStart
+                ? (source || 'Start')
+                : isDest
+                  ? (destination || 'Destination')
+                  : `Stop ${idx}: ${allWaypoints[idx]}`,
+              position: [coord.lat, coord.lng],
+              type: isStart ? 'start' : isDest ? 'destination' : 'stop',
+            });
+          });
+          setMapStops(newStops);
+        }
       } else {
         setError('Could not connect to the backend. Make sure the server is running on port 5000.');
       }
 
       if (geoResult.status === 'rejected') {
-        setGeoError('Could not geocode one or both locations.');
+        setGeoError('Could not geocode one or more locations.');
       }
     } catch (err) {
       console.error('LiveMap: handleSearch error', err);
@@ -316,13 +580,24 @@ const LiveMapScreen = () => {
 
   const handleSelectRoute = (routeId: string) => {
     setSelectedRoute(routeId);
+    if (navigationMode) {
+      const route = routes.find((r) => r.id === routeId);
+      if (route?.segmentGeometries) {
+        const segs = (route.segmentGeometries as [number, number][][]).map((geom) =>
+          normalizeCoordinates(geom)
+        );
+        setSegmentGeometries(segs);
+      }
+    }
   };
 
   const activeRoute = routes.find((r) => r.id === selectedRoute);
   const insights = recommended?.insights;
+  const currentInstruction = voiceInstructions[currentStepIndex];
+  const totalSteps = voiceInstructions.length;
 
   return (
-    <motion.div variants={stagger} initial="hidden" animate="show" className="w-full max-w-[1200px] mx-auto pb-10">
+    <motion.div variants={stagger} initial="hidden" animate="show" className="w-full max-w-[1200px] mx-auto">
       <motion.div variants={fadeUp} className="mb-10">
         <h1 className="text-3xl font-bold text-gray-900 tracking-tight mb-1">AI Route Optimizer</h1>
         <p className="text-gray-500 font-medium">Compare routes, analyze trade-offs, and let AI pick the best option</p>
@@ -341,12 +616,23 @@ const LiveMapScreen = () => {
               </div>
               <input
                 value={source}
-                onChange={(e) => { setSource(e.target.value); setRoutes([]); setSelectedRoute(null); }}
+                onChange={(e) => { setSource(e.target.value); setSourceCoords(null); setRoutes([]); setSelectedRoute(null); }}
                 onKeyDown={handleKeyDown}
-                placeholder="Enter origin (e.g. Andheri)"
+                placeholder="Enter origin (e.g. Andheri / अंधेरी)"
                 className="w-full px-4 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-sm font-medium text-gray-900 placeholder-gray-400 outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-300 transition-all"
               />
             </div>
+
+            {/* Use Current Location Button */}
+            <motion.button
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={handleUseCurrentLocation}
+              className="ml-12 mt-2 mb-2 flex items-center gap-1.5 text-xs font-medium text-blue-600 hover:text-blue-700 transition-colors"
+            >
+              <Locate size={12} strokeWidth={2.5} />
+              Use Current Location
+            </motion.button>
 
             {/* Connector + Swap */}
             <div className="flex items-center justify-between pl-4 h-8 relative">
@@ -371,7 +657,7 @@ const LiveMapScreen = () => {
                   value={stop}
                   onChange={(e) => updateStop(idx, e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder={`Stop ${idx + 1} (e.g. Dadar)`}
+                  placeholder={`Stop ${idx + 1} (e.g. Dadar / दादर)`}
                   className="w-full px-4 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-sm font-medium text-gray-900 placeholder-gray-400 outline-none focus:ring-2 focus:ring-purple-200 focus:border-purple-300 transition-all"
                 />
                 <motion.button
@@ -440,6 +726,84 @@ const LiveMapScreen = () => {
             </motion.button>
           </motion.div>
 
+          {/* Navigation Control Panel */}
+          {routes.length > 0 && selectedRoute && (
+            <motion.div variants={fadeUp} className="bg-white rounded-[28px] p-5 shadow-sm border border-gray-100">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="font-bold text-sm text-gray-900 flex items-center gap-2">
+                  <Navigation size={14} className="text-[#1b3a2a]" />
+                  Navigation
+                </h4>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setVoiceEnabled(!voiceEnabled)}
+                    className={`p-1.5 rounded-lg transition-colors ${voiceEnabled ? 'bg-[#1b3a2a] text-white' : 'bg-gray-100 text-gray-400'}`}
+                  >
+                    {voiceEnabled ? <Volume2 size={14} /> : <VolumeX size={14} />}
+                  </button>
+                </div>
+              </div>
+
+              {!navigationMode ? (
+                <motion.button
+                  whileHover={{ scale: 1.01 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={startNavigation}
+                  className="w-full py-3 bg-[#1b3a2a] text-white rounded-xl font-semibold text-sm flex items-center justify-center gap-2 hover:bg-[#234d38] transition-all"
+                >
+                  <Play size={14} />
+                  Start Journey
+                </motion.button>
+              ) : (
+                <div className="space-y-3">
+                  {currentInstruction && (
+                    <div className="p-3 bg-[#1b3a2a]/5 rounded-xl border border-[#1b3a2a]/10">
+                      <div className="flex items-center gap-2 mb-1">
+                        <LocateFixed size={12} className="text-[#1b3a2a] animate-pulse" />
+                        <span className="text-[10px] font-bold text-[#1b3a2a] uppercase tracking-wider">
+                          Step {currentStepIndex + 1} of {totalSteps}
+                          {isSpeaking && <span className="ml-1 text-[#c5f02c]">● Speaking</span>}
+                        </span>
+                      </div>
+                      <p className="text-sm font-semibold text-gray-900">{currentInstruction.text}</p>
+                      <div className="flex items-center gap-3 mt-1">
+                        <span className="text-xs text-gray-500">{currentInstruction.distance}</span>
+                        <span className="text-xs text-gray-500">~{currentInstruction.duration} min</span>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="max-h-40 overflow-y-auto space-y-1">
+                    {voiceInstructions.map((instr, idx) => (
+                      <div
+                        key={idx}
+                        className={`px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+                          idx === currentStepIndex
+                            ? 'bg-[#1b3a2a] text-white'
+                            : idx < currentStepIndex
+                              ? 'bg-gray-50 text-gray-400 line-through'
+                              : 'bg-gray-50 text-gray-600'
+                        }`}
+                      >
+                        {idx + 1}. {instr.text}
+                      </div>
+                    ))}
+                  </div>
+
+                  <motion.button
+                    whileHover={{ scale: 1.01 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={stopNavigation}
+                    className="w-full py-3 bg-red-500 text-white rounded-xl font-semibold text-sm flex items-center justify-center gap-2 hover:bg-red-600 transition-all"
+                  >
+                    <Square size={14} />
+                    Stop Navigation
+                  </motion.button>
+                </div>
+              )}
+            </motion.div>
+          )}
+
           <motion.div variants={fadeUp} className="bg-[#1b3a2a] rounded-[28px] p-5 text-white relative overflow-hidden">
             <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none" />
             <div className="relative z-10">
@@ -456,13 +820,19 @@ const LiveMapScreen = () => {
         </div>
 
         {/* ── RIGHT PANEL ── */}
-        <div className="space-y-6 overflow-y-auto max-h-[calc(100vh-180px)]">
+        <div className="space-y-6 overflow-y-auto pr-2" style={{ scrollBehavior: 'smooth', maxHeight: 'calc(100vh - 140px)' }}>
           <motion.div variants={fadeUp} className="w-full" style={{ height: 420 }}>
             <MapComponent
               routes={mapRoutes}
               selectedRouteId={selectedRoute || undefined}
               sourceLabel={source}
               destinationLabel={destination}
+              stops={mapStops}
+              userLocation={userLocation}
+              navigationMode={navigationMode}
+              segmentGeometries={segmentGeometries}
+              currentSegmentIndex={currentSegmentIndex}
+              onUserLocationChange={handleUserLocationChange}
             />
           </motion.div>
 
@@ -490,6 +860,9 @@ const LiveMapScreen = () => {
                   <p className="text-sm font-medium text-gray-500">
                     <span className="font-bold text-gray-900">{routes.length}</span> routes analyzed
                     <span className="ml-2 text-gray-400">· ~{distanceKm} km corridor</span>
+                    {waypoints.length > 2 && (
+                      <span className="ml-2 text-purple-600 font-semibold">· {waypoints.length} stops</span>
+                    )}
                   </p>
                   <div className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-1.5">
                     <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />

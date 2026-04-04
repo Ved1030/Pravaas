@@ -1,7 +1,5 @@
-const routeService = require("../services/route.service");
 const disruptionService = require("../services/disruption.service");
-const { simulateDelay } = require("../services/routeEngine");
-const { generateRoutes } = require("../services/routeEngine");
+const { simulateDelay, generateRoutes } = require("../services/routeEngine");
 
 exports.simulateDelay = (req, res) => {
   const { delay, mode } = req.body;
@@ -16,12 +14,18 @@ exports.simulateDelay = (req, res) => {
     });
   }
 
-  const routes = routeService.getAllRoutes();
-  const updatedRoutes = disruptionService.applyDelay(routes, delay);
+  if (!delay && delay !== 0) {
+    return res.status(400).json({
+      error: "Either 'mode' or 'delay' must be provided",
+    });
+  }
 
-  res.json({
+  // Generic delay simulation without a specific route snapshot
+  return res.json({
     alert: "⚠️ Disruption detected",
-    routes: updatedRoutes,
+    delay,
+    message: `A delay of ${delay} minutes has been applied to all services`,
+    routes: [],
   });
 };
 

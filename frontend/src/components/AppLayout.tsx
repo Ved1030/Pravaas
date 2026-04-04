@@ -128,7 +128,7 @@ const AppLayout = () => {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 lg:ml-[260px] pb-20 lg:pb-0 overflow-y-auto">
+      <main className="flex-1 lg:ml-[260px] pb-20 lg:pb-0" style={{ overflow: 'hidden' }}>
         <AnimatePresence mode="wait">
           <motion.div
             key={activeScreen}
