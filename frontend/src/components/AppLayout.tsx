@@ -12,7 +12,20 @@ import {
   User,
   Bell,
   LogOut,
-  LogIn
+  Navigation,
+  Mic,
+  Users,
+  Building2,
+  GraduationCap,
+  Heart,
+  Truck,
+  Stethoscope,
+  Landmark,
+  BarChart3,
+  Trophy,
+  Lightbulb,
+  IndianRupee,
+  FileText,
 } from 'lucide-react';
 
 import DashboardScreen from '@/components/screens/DashboardScreen';
@@ -23,21 +36,56 @@ import HistoryScreen from '@/components/screens/HistoryScreen';
 import ProfileScreen from '@/components/screens/ProfileScreen';
 import RouteComparisonScreen from '@/components/screens/RouteComparisonScreen';
 import NotificationsScreen from '@/components/screens/NotificationsScreen';
+import JourneyTimelineScreen from '@/components/screens/JourneyTimelineScreen';
+import VoiceAssistantScreen from '@/components/screens/VoiceAssistantScreen';
+import RecruiterDashboardScreen from '@/components/screens/RecruiterDashboardScreen';
+import CorporateDashboardScreen from '@/components/screens/CorporateDashboardScreen';
+import StudentDashboardScreen from '@/components/screens/StudentDashboardScreen';
+import ParentDashboardScreen from '@/components/screens/ParentDashboardScreen';
+import DeliveryDashboardScreen from '@/components/screens/DeliveryDashboardScreen';
+import HealthcareDashboardScreen from '@/components/screens/HealthcareDashboardScreen';
+import GovernmentDashboardScreen from '@/components/screens/GovernmentDashboardScreen';
+import AnalyticsScreen from '@/components/screens/AnalyticsScreen';
+import GamificationScreen from '@/components/screens/GamificationScreen';
+import InsightsScreen from '@/components/screens/InsightsScreen';
+import BusinessInsightsScreen from '@/components/screens/BusinessInsightsScreen';
+import ReportsScreen from '@/components/screens/ReportsScreen';
+import EmergencySOS from '@/components/EmergencySOS';
 import ErrorBoundary from '@/components/ErrorBoundary';
 
-const navItems = [
+const coreNavItems = [
   { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { id: 'planner', icon: Route, label: 'Planner' },
+  { id: 'timeline', icon: Navigation, label: 'Journey' },
   { id: 'map', icon: Map, label: 'Live Map' },
   { id: 'comparison', icon: GitCompare, label: 'Compare' },
   { id: 'alerts', icon: AlertTriangle, label: 'Disruptions' },
   { id: 'notifications', icon: Bell, label: 'Notifications' },
+  { id: 'voice', icon: Mic, label: 'Voice' },
   { id: 'history', icon: History, label: 'History' },
   { id: 'profile', icon: User, label: 'Profile' },
 ];
 
+const enterpriseNavItems = [
+  { id: 'recruiter', icon: Users, label: 'Recruiter' },
+  { id: 'corporate', icon: Building2, label: 'Corporate' },
+  { id: 'student', icon: GraduationCap, label: 'Student' },
+  { id: 'parent', icon: Heart, label: 'Parent' },
+  { id: 'delivery', icon: Truck, label: 'Delivery' },
+  { id: 'healthcare', icon: Stethoscope, label: 'Healthcare' },
+  { id: 'government', icon: Landmark, label: 'Smart City' },
+  { id: 'analytics', icon: BarChart3, label: 'Analytics' },
+  { id: 'gamification', icon: Trophy, label: 'Gamification' },
+  { id: 'insights', icon: Lightbulb, label: 'Insights' },
+  { id: 'business', icon: IndianRupee, label: 'Business' },
+  { id: 'reports', icon: FileText, label: 'Reports' },
+];
+
+const allNavItems = [...coreNavItems, ...enterpriseNavItems];
+
 const AppLayout = () => {
   const [activeScreen, setActiveScreen] = useState('dashboard');
+  const [showEnterprise, setShowEnterprise] = useState(false);
   const navigate = useNavigate();
   const { logout, user } = useAuth();
 
@@ -50,15 +98,31 @@ const AppLayout = () => {
     switch (activeScreen) {
       case 'dashboard': return <DashboardScreen onNavigate={setActiveScreen} />;
       case 'planner': return <PlannerScreen />;
+      case 'timeline': return <JourneyTimelineScreen />;
       case 'map': return <LiveMapScreen />;
       case 'comparison': return <RouteComparisonScreen />;
       case 'alerts': return <DisruptionsScreen />;
       case 'notifications': return <NotificationsScreen />;
+      case 'voice': return <VoiceAssistantScreen />;
       case 'history': return <HistoryScreen />;
       case 'profile': return <ProfileScreen />;
+      case 'recruiter': return <RecruiterDashboardScreen />;
+      case 'corporate': return <CorporateDashboardScreen />;
+      case 'student': return <StudentDashboardScreen />;
+      case 'parent': return <ParentDashboardScreen />;
+      case 'delivery': return <DeliveryDashboardScreen />;
+      case 'healthcare': return <HealthcareDashboardScreen />;
+      case 'government': return <GovernmentDashboardScreen />;
+      case 'analytics': return <AnalyticsScreen />;
+      case 'gamification': return <GamificationScreen />;
+      case 'insights': return <InsightsScreen />;
+      case 'business': return <BusinessInsightsScreen />;
+      case 'reports': return <ReportsScreen />;
       default: return <DashboardScreen onNavigate={setActiveScreen} />;
     }
   };
+
+  const visibleNavItems = showEnterprise ? enterpriseNavItems : coreNavItems;
 
   return (
     <div className="min-h-screen flex w-full bg-[#f9f8f2] font-finflow">
@@ -74,8 +138,26 @@ const AppLayout = () => {
           </h1>
         </div>
 
+        {/* Nav Toggle */}
+        <div className="px-4 mb-2">
+          <div className="flex bg-gray-100 rounded-xl p-1">
+            <button
+              onClick={() => { setShowEnterprise(false); setActiveScreen('dashboard'); }}
+              className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-colors ${!showEnterprise ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'}`}
+            >
+              Core
+            </button>
+            <button
+              onClick={() => { setShowEnterprise(true); setActiveScreen('recruiter'); }}
+              className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-colors ${showEnterprise ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'}`}
+            >
+              Enterprise
+            </button>
+          </div>
+        </div>
+
         <nav className="flex-1 px-4 py-2 space-y-1 overflow-y-auto hide-scrollbar">
-          {navItems.map((item) => {
+          {visibleNavItems.map((item) => {
             const isActive = activeScreen === item.id;
             return (
               <button
@@ -149,9 +231,12 @@ const AppLayout = () => {
         </AnimatePresence>
       </main>
 
-      {/* Mobile Bottom Nav */}
+      {/* Global Emergency SOS */}
+      <EmergencySOS />
+
+      {/* Mobile Bottom Nav - Core only */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 z-50 flex overflow-x-auto hide-scrollbar">
-        {navItems.map((item) => (
+        {coreNavItems.map((item) => (
           <button
             key={item.id}
             onClick={() => setActiveScreen(item.id)}

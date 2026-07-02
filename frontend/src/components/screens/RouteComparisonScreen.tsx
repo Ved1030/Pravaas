@@ -5,8 +5,12 @@ import {
   Clock, Shield, Sparkles, AlertCircle, Loader2,
   TrendingDown, Wallet, Gauge, AlertTriangle, CheckCircle2,
   BarChart3, Train, Bus, Car, Footprints, GitCompare,
+  Cloud, Brain, Award,
 } from 'lucide-react';
-import { planRoute, getConnectionStateMessage, onConnectionStateChange, getConnectionState, type ConnectionState, type BackendRoute, type AIRecommendation } from '@/lib/api';
+import { planRoute, getConnectionStateMessage, onConnectionStateChange, getConnectionState, type ConnectionState, type BackendRoute, type AIRecommendation, aiCompare } from '@/lib/api';
+import ComfortScore from '@/components/ComfortScore';
+import CrowdIndicator from '@/components/CrowdIndicator';
+import WeatherImpact from '@/components/WeatherImpact';
 
 const stagger = { hidden: {}, show: { transition: { staggerChildren: 0.08 } } };
 const fadeUp = {
@@ -35,14 +39,12 @@ const resourceConfig: Record<string, { icon: any; color: string; bg: string; bor
   auto:   { icon: Car,        color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-200'},
 };
 
-// ── Confidence helpers ─────────────────────────────────────────────────────────
 function getConfidenceStyle(score: number) {
   if (score >= 85) return { bar: 'bg-emerald-500', text: 'text-emerald-600', bg: 'bg-emerald-50',  label: 'High' };
   if (score >= 75) return { bar: 'bg-amber-400',   text: 'text-amber-600',   bg: 'bg-amber-50',    label: 'Good' };
   return              { bar: 'bg-red-400',    text: 'text-red-600',    bg: 'bg-red-50',     label: 'Fair' };
 }
 
-/** Full confidence bar used in route cards and selected-route tile */
 function ConfidenceBar({ score }: { score: number }) {
   const pct = Math.max(0, Math.min(100, score ?? 0));
   const s = getConfidenceStyle(pct);
@@ -68,7 +70,6 @@ function ConfidenceBar({ score }: { score: number }) {
   );
 }
 
-/** Compact cell used inside the comparison table */
 function ConfidenceCell({ score }: { score: number }) {
   const pct = Math.max(0, Math.min(100, score ?? 0));
   const s = getConfidenceStyle(pct);
@@ -90,7 +91,6 @@ function ConfidenceCell({ score }: { score: number }) {
   );
 }
 
-// ── Resource Flow ──────────────────────────────────────────────────────────────
 function ResourceFlow({ resources }: { resources: any[] }) {
   if (!resources || resources.length === 0) return <span className="text-xs text-gray-400">—</span>;
   return (
@@ -116,7 +116,6 @@ function ResourceFlow({ resources }: { resources: any[] }) {
   );
 }
 
-// ── Main Component ─────────────────────────────────────────────────────────────
 const RouteComparisonScreen = () => {
   const [origin, setOrigin] = useState('Andheri Station');
   const [dest, setDest]     = useState('BKC, Mumbai');
@@ -127,6 +126,8 @@ const RouteComparisonScreen = () => {
   const [recommended, setRecommended]     = useState<AIRecommendation | null>(null);
   const [hasSearched, setHasSearched]     = useState(false);
   const [connState, setConnState] = useState<ConnectionState>(getConnectionState());
+  const [comparisonData, setComparisonData] = useState<any>(null);
+  const [aiLoading, setAiLoading] = useState(false);
 
   useEffect(() => {
     return onConnectionStateChange(setConnState);
@@ -141,6 +142,7 @@ const RouteComparisonScreen = () => {
     setRoutes([]);
     setSelectedRoute(null);
     setHasSearched(true);
+    setComparisonData(null);
     try {
       const data = await planRoute(src, dst);
       const backendRoutes = data?.routes || [];
@@ -148,6 +150,10 @@ const RouteComparisonScreen = () => {
       setRoutes(backendRoutes);
       setSelectedRoute(recId || backendRoutes[0]?.id || null);
       setRecommended(data?.recommended || null);
+      setAiLoading(true);
+      aiCompare(src, dst).then((cmp) => {
+        setComparisonData(cmp?.comparison || null);
+      }).catch(() => {}).finally(() => setAiLoading(false));
     } catch {
       setError(getConnectionStateMessage(connState) || 'Could not connect to the backend. Please try again.');
     } finally {
@@ -160,6 +166,7 @@ const RouteComparisonScreen = () => {
   };
 
   const activeRoute = routes.find(r => r.id === selectedRoute);
+  const comparisonForSelected = comparisonData?.comparisons?.find((c: any) => c.routeId === selectedRoute);
 
   const metrics = [
     { key: 'durationMin',    label: 'Travel Time', icon: Clock,          format: (v: any) => `${v} min` },
@@ -180,7 +187,6 @@ const RouteComparisonScreen = () => {
   return (
     <motion.div variants={stagger} initial="hidden" animate="show" className="w-full max-w-[1200px] mx-auto pb-10">
 
-      {/* ── Header ── */}
       <motion.div variants={fadeUp} className="mb-10">
         <div className="flex items-center gap-3 mb-1">
           <div className="w-10 h-10 rounded-2xl bg-[#1b3a2a] flex items-center justify-center">
@@ -191,7 +197,6 @@ const RouteComparisonScreen = () => {
         <p className="text-gray-500 font-medium ml-[52px]">Side-by-side analysis of Fastest, Cheapest &amp; Comfort routes</p>
       </motion.div>
 
-      {/* ── Search Card ── */}
       <motion.div variants={fadeUp} className="bg-white rounded-[28px] p-7 shadow-sm border border-gray-100 mb-8">
         <h3 className="font-bold text-lg text-gray-900 mb-6">Compare Routes</h3>
 
@@ -250,7 +255,6 @@ const RouteComparisonScreen = () => {
         )}
       </motion.div>
 
-      {/* ── Results ── */}
       <AnimatePresence mode="wait">
         {loading && (
           <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -269,12 +273,10 @@ const RouteComparisonScreen = () => {
         {!loading && routes.length > 0 && (
           <motion.div key="results" variants={stagger} initial="hidden" animate="show" className="space-y-8">
 
-            {/* AI Recommendation Banner */}
             {recommended && (
               <motion.div variants={fadeUp}
                 className="bg-gradient-to-r from-[#1b3a2a] to-[#2c5f45] rounded-[24px] p-6 text-white">
                 <div className="flex items-start justify-between gap-6">
-                  {/* Text side */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-3">
                       <Sparkles size={16} className="text-[#c5f02c]" />
@@ -303,7 +305,6 @@ const RouteComparisonScreen = () => {
                     </div>
                   </div>
 
-                  {/* Overall confidence badge */}
                   <div className="bg-white/10 rounded-2xl p-4 text-center flex-shrink-0 min-w-[108px]">
                     <Shield size={18} className="text-[#c5f02c] mx-auto mb-1" />
                     <p className="text-3xl font-bold tabular-nums text-white leading-none">
@@ -323,7 +324,31 @@ const RouteComparisonScreen = () => {
               </motion.div>
             )}
 
-            {/* Route Cards */}
+            {comparisonData?.winners && Object.keys(comparisonData.winners).length > 0 && (
+              <motion.div variants={fadeUp} className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+                <div className="flex items-center gap-2 mb-4">
+                  <Award size={16} className="text-[#1b3a2a]" />
+                  <h3 className="font-semibold text-sm text-gray-900">AI Comparison Winners</h3>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
+                  {Object.entries(comparisonData.winners).map(([category, routeId]) => {
+                    const route = routes.find(r => r.id === routeId);
+                    if (!route) return null;
+                    const cfg = routeTypeConfig[route.type] || routeTypeConfig.comfort;
+                    return (
+                      <div key={category} className="bg-gray-50 rounded-xl p-3 text-center border border-gray-100">
+                        <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">{category}</p>
+                        <div className={`${cfg.bg} ${cfg.text} inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold`}>
+                          <cfg.icon size={10} />
+                          {cfg.label}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </motion.div>
+            )}
+
             <motion.div variants={fadeUp} className="grid grid-cols-1 md:grid-cols-3 gap-5">
               {routes.map(route => {
                 const cfg        = routeTypeConfig[route.type] || routeTypeConfig.comfort;
@@ -332,6 +357,11 @@ const RouteComparisonScreen = () => {
                 const isSelected = route.id === selectedRoute;
                 const isAIPick   = route.id === recommended?.routeId;
                 const confidence = route.confidence ?? 0;
+
+                const cmp = comparisonData?.comparisons?.find((c: any) => c.routeId === route.id);
+                const comfortScore = cmp?.metrics?.comfort?.score;
+                const delayRisk = cmp?.metrics?.delayRisk;
+                const weatherImpact = comparisonData?.weather;
 
                 return (
                   <motion.div
@@ -344,7 +374,6 @@ const RouteComparisonScreen = () => {
                         : 'border border-gray-100 bg-white hover:border-gray-200 hover:shadow-md'
                     }`}
                   >
-                    {/* Header */}
                     <div className="flex items-center justify-between mb-4">
                       <div className={`${cfg.bg} ${cfg.text} px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5`}>
                         <BadgeIcon size={12} strokeWidth={3} />
@@ -356,7 +385,6 @@ const RouteComparisonScreen = () => {
                       {isSelected && <CheckCircle2 size={16} className="text-[#1b3a2a]" />}
                     </div>
 
-                    {/* Time + Cost */}
                     <div className="flex items-baseline gap-2 mb-1">
                       <span className="text-3xl font-bold text-gray-900 tabular-nums">{route.durationMin}</span>
                       <span className="text-sm font-medium text-gray-400">min</span>
@@ -368,15 +396,26 @@ const RouteComparisonScreen = () => {
                         <div className={`w-1.5 h-1.5 rounded-full ${traffic.dot}`} />
                         <span className={`text-[10px] font-semibold ${traffic.color}`}>{traffic.label}</span>
                       </div>
+                      {delayRisk && (
+                        <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md ${delayRisk.color.bg}`}>
+                          <span className={`text-[10px] font-semibold ${delayRisk.color.text}`}>
+                            {delayRisk.probability}%
+                          </span>
+                        </div>
+                      )}
                     </div>
 
-                    {/* Transport Mix */}
                     <div className="bg-gray-50/80 rounded-xl p-3 mb-4 flex-1">
                       <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2.5">Transport Mix</p>
                       <ResourceFlow resources={route.resources || []} />
+                      {comfortScore !== undefined && (
+                        <div className="mt-2 pt-2 border-t border-gray-200/50 flex items-center justify-between">
+                          <span className="text-[10px] font-semibold text-gray-400">Comfort</span>
+                          <ComfortScore score={comfortScore} size={28} strokeWidth={3} />
+                        </div>
+                      )}
                     </div>
 
-                    {/* AI Confidence Bar */}
                     <div className="pt-3 border-t border-gray-100">
                       <ConfidenceBar score={confidence} />
                       {(route.predictedDelay || 0) > 0 && (
@@ -391,7 +430,6 @@ const RouteComparisonScreen = () => {
               })}
             </motion.div>
 
-            {/* Comparison Table */}
             <motion.div variants={fadeUp} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
               <div className="p-6 pb-4 border-b border-gray-50">
                 <div className="flex items-center gap-3">
@@ -429,7 +467,6 @@ const RouteComparisonScreen = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {/* Regular metric rows */}
                     {metrics.map(({ key, label, icon: Icon, format }, mIdx) => (
                       <tr key={key} className={mIdx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
                         <td className="px-6 py-4 border-b border-gray-100">
@@ -464,7 +501,133 @@ const RouteComparisonScreen = () => {
                       </tr>
                     ))}
 
-                    {/* ★ AI Confidence row — visual bars */}
+                    <tr className="bg-white">
+                      <td className="px-6 py-4 border-b border-gray-100">
+                        <div className="flex items-center gap-2">
+                          <AlertTriangle size={13} className="text-gray-400" />
+                          <span className="text-xs font-semibold text-gray-600">Delay Risk</span>
+                        </div>
+                      </td>
+                      {routes.map(route => {
+                        const cmp = comparisonData?.comparisons?.find((c: any) => c.routeId === route.id);
+                        const dr = cmp?.metrics?.delayRisk;
+                        const isSel = route.id === selectedRoute;
+                        return (
+                          <td key={route.id}
+                            className={`px-6 py-4 text-center border-b border-gray-100 transition-colors ${isSel ? 'bg-[#f0f7f2]/50' : ''}`}>
+                            {dr ? (
+                              <div className="flex flex-col items-center gap-0.5">
+                                <span className={`text-sm font-bold ${dr.color.text}`}>{dr.probability}%</span>
+                                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${dr.color.bg} ${dr.color.text}`}>{dr.label}</span>
+                              </div>
+                            ) : <span className="text-sm text-gray-400">—</span>}
+                          </td>
+                        );
+                      })}
+                    </tr>
+
+                    <tr className="bg-gray-50/50">
+                      <td className="px-6 py-4 border-b border-gray-100">
+                        <div className="flex items-center gap-2">
+                          <Users size={13} className="text-gray-400" />
+                          <span className="text-xs font-semibold text-gray-600">Comfort Score</span>
+                        </div>
+                      </td>
+                      {routes.map(route => {
+                        const cmp = comparisonData?.comparisons?.find((c: any) => c.routeId === route.id);
+                        const cs = cmp?.metrics?.comfort?.score;
+                        const isSel = route.id === selectedRoute;
+                        return (
+                          <td key={route.id}
+                            className={`px-6 py-4 text-center border-b border-gray-100 transition-colors ${isSel ? 'bg-[#f0f7f2]/50' : ''}`}>
+                            {cs !== undefined ? (
+                              <div className="flex justify-center">
+                                <ComfortScore score={cs} size={40} strokeWidth={3} />
+                              </div>
+                            ) : <span className="text-sm text-gray-400">—</span>}
+                          </td>
+                        );
+                      })}
+                    </tr>
+
+                    <tr className="bg-white">
+                      <td className="px-6 py-4 border-b border-gray-100">
+                        <div className="flex items-center gap-2">
+                          <Cloud size={13} className="text-gray-400" />
+                          <span className="text-xs font-semibold text-gray-600">Weather Impact</span>
+                        </div>
+                      </td>
+                      {routes.map(route => {
+                        const cmp = comparisonData?.comparisons?.find((c: any) => c.routeId === route.id);
+                        const wi = cmp?.metrics?.weatherImpact;
+                        const isSel = route.id === selectedRoute;
+                        return (
+                          <td key={route.id}
+                            className={`px-6 py-4 text-center border-b border-gray-100 transition-colors ${isSel ? 'bg-[#f0f7f2]/50' : ''}`}>
+                            {wi !== undefined ? (
+                              <span className={`text-sm font-bold ${wi > 5 ? 'text-amber-600' : 'text-emerald-600'}`}>
+                                {wi > 0 ? `+${wi} min` : 'None'}
+                              </span>
+                            ) : <span className="text-sm text-gray-400">—</span>}
+                          </td>
+                        );
+                      })}
+                    </tr>
+
+                    <tr className="bg-gray-50/50">
+                      <td className="px-6 py-4 border-b border-gray-100">
+                        <div className="flex items-center gap-2">
+                          <Footprints size={13} className="text-gray-400" />
+                          <span className="text-xs font-semibold text-gray-600">Walking Distance</span>
+                        </div>
+                      </td>
+                      {routes.map(route => {
+                        const cmp = comparisonData?.comparisons?.find((c: any) => c.routeId === route.id);
+                        const wd = cmp?.metrics?.walkingDistance?.value;
+                        const isSel = route.id === selectedRoute;
+                        const walkingMinValues = [0, ...routes.map(r => {
+                          const rc = comparisonData?.comparisons?.find((c: any) => c.routeId === r.id);
+                          return rc?.metrics?.walkingDistance?.value ?? Infinity;
+                        })];
+                        const bestWalk = Math.min(...walkingMinValues.filter(v => v > 0));
+                        const isBestWalk = wd === bestWalk;
+                        return (
+                          <td key={route.id}
+                            className={`px-6 py-4 text-center border-b border-gray-100 transition-colors ${isSel ? 'bg-[#f0f7f2]/50' : ''}`}>
+                            {wd !== undefined ? (
+                              <span className={`text-sm font-bold ${isBestWalk ? 'text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-lg' : 'text-gray-900'}`}>
+                                {Math.round(wd)} min
+                              </span>
+                            ) : <span className="text-sm text-gray-400">—</span>}
+                          </td>
+                        );
+                      })}
+                    </tr>
+
+                    <tr className="bg-white">
+                      <td className="px-6 py-4 border-b border-gray-100">
+                        <div className="flex items-center gap-2">
+                          <GitCompare size={13} className="text-gray-400" />
+                          <span className="text-xs font-semibold text-gray-600">Transfers</span>
+                        </div>
+                      </td>
+                      {routes.map(route => {
+                        const tr = route.transfers ?? 0;
+                        const isSel = route.id === selectedRoute;
+                        const allTransfers = routes.map(r => r.transfers ?? 0);
+                        const bestTransfer = Math.min(...allTransfers);
+                        const isBest = tr === bestTransfer;
+                        return (
+                          <td key={route.id}
+                            className={`px-6 py-4 text-center border-b border-gray-100 transition-colors ${isSel ? 'bg-[#f0f7f2]/50' : ''}`}>
+                            <span className={`text-sm font-bold ${isBest ? 'text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-lg' : 'text-gray-900'}`}>
+                              {tr}
+                            </span>
+                          </td>
+                        );
+                      })}
+                    </tr>
+
                     <tr className="bg-white border-t-2 border-gray-100">
                       <td className="px-6 py-5 border-b border-gray-100">
                         <div className="flex items-center gap-2">
@@ -485,7 +648,6 @@ const RouteComparisonScreen = () => {
                       })}
                     </tr>
 
-                    {/* Transport Mix row */}
                     <tr className="bg-gray-50/50">
                       <td className="px-6 py-4 border-b border-gray-100">
                         <div className="flex items-center gap-2">
@@ -502,11 +664,35 @@ const RouteComparisonScreen = () => {
                         </td>
                       ))}
                     </tr>
+
+                    <tr className="bg-white">
+                      <td className="px-6 py-4 border-b border-gray-100">
+                        <div className="flex items-center gap-2">
+                          <Users size={13} className="text-gray-400" />
+                          <span className="text-xs font-semibold text-gray-600">Crowd Level</span>
+                        </div>
+                      </td>
+                      {routes.map(route => {
+                        const cmp = comparisonData?.comparisons?.find((c: any) => c.routeId === route.id);
+                        const crowdAvg = cmp?.metrics?.crowd?.average;
+                        const isSel = route.id === selectedRoute;
+                        const crowdLevel = crowdAvg !== undefined
+                          ? (crowdAvg >= 70 ? 'very_high' : crowdAvg >= 50 ? 'high' : crowdAvg >= 30 ? 'medium' : 'low')
+                          : 'low';
+                        return (
+                          <td key={route.id}
+                            className={`px-6 py-4 text-center border-b border-gray-100 transition-colors ${isSel ? 'bg-[#f0f7f2]/50' : ''}`}>
+                            {crowdAvg !== undefined ? (
+                              <CrowdIndicator level={crowdLevel} score={crowdAvg} />
+                            ) : <span className="text-sm text-gray-400">—</span>}
+                          </td>
+                        );
+                      })}
+                    </tr>
                   </tbody>
                 </table>
               </div>
 
-              {/* Legend */}
               <div className="px-6 py-3 bg-gray-50/50 flex items-center gap-6 flex-wrap">
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded bg-emerald-50 border border-emerald-200" />
@@ -523,14 +709,13 @@ const RouteComparisonScreen = () => {
               </div>
             </motion.div>
 
-            {/* Selected Route Detail */}
             {activeRoute && (
               <motion.div variants={fadeUp} className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
                 <h4 className="font-semibold text-base text-gray-900 mb-5 flex items-center gap-2">
                   <BarChart3 size={16} className="text-[#1b3a2a]" />
                   Selected Route — {routeTypeConfig[activeRoute.type]?.label || activeRoute.type}
                 </h4>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                   {([
                     { icon: Clock,       label: 'Total Time',     value: `${activeRoute.durationMin} min`,   sub: activeRoute.predictedDelay > 0 ? `+${activeRoute.predictedDelay} min peak` : undefined },
                     { icon: Wallet,      label: 'Estimated Cost', value: `₹${activeRoute.estimatedCost}`,   sub: undefined },
@@ -546,7 +731,13 @@ const RouteComparisonScreen = () => {
                     </div>
                   ))}
 
-                  {/* AI Confidence tile */}
+                  {comparisonForSelected?.metrics?.comfort && (
+                    <div className="bg-gray-50 rounded-xl p-4 flex flex-col items-center justify-center">
+                      <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Comfort</span>
+                      <ComfortScore score={comparisonForSelected.metrics.comfort.score} size={48} strokeWidth={4} />
+                    </div>
+                  )}
+
                   <div className="bg-gray-50 rounded-xl p-4">
                     <div className="flex items-center gap-2 mb-3">
                       <Shield size={14} className="text-gray-400" />
@@ -555,6 +746,12 @@ const RouteComparisonScreen = () => {
                     <ConfidenceBar score={activeRoute.confidence ?? 0} />
                   </div>
                 </div>
+
+                {comparisonData?.weather && (
+                  <div className="mt-4">
+                    <WeatherImpact weather={comparisonData.weather} />
+                  </div>
+                )}
               </motion.div>
             )}
           </motion.div>

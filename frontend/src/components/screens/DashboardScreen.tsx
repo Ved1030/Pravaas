@@ -8,6 +8,8 @@ import {
 import { savedRoutes, disruptions, journeyHistory, routeResults } from '@/lib/mock-data';
 import { useState, useEffect, useRef, useMemo } from 'react';
 import LiveLocationCard from '@/components/ui/LiveLocationCard';
+import WomenSafetyToggle from '@/components/WomenSafetyToggle';
+import { Heart } from 'lucide-react';
 
 const stagger: Variants = { hidden: {}, show: { transition: { staggerChildren: 0.08 } } };
 const fadeUp: Variants = {
@@ -124,6 +126,7 @@ const DashboardScreen = ({ onNavigate }: Props) => {
   const { greeting, time, date } = useLiveClock();
   const confidence = useAnimatedCounter(87, 2);
   const stats = useDashboardStats();
+  const [womenSafe, setWomenSafe] = useState(false);
 
   const recentRoutes = journeyHistory.slice(0, 5);
 
@@ -474,6 +477,11 @@ const DashboardScreen = ({ onNavigate }: Props) => {
                 <span className="text-xs font-bold text-gray-900">Disruptions</span>
               </motion.button>
             </div>
+          </motion.div>
+
+          {/* Women Safety Toggle */}
+          <motion.div variants={fadeUp}>
+            <WomenSafetyToggle enabled={womenSafe} onToggle={setWomenSafe} />
           </motion.div>
 
           {/* Live Disruptions */}

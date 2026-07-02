@@ -591,9 +591,11 @@ import {
   Star, Plus, Train, Bus, Bell, MapPin, Shield, Clock, Pencil, Globe,
   ChevronRight, Flame, Leaf, Zap, Award, Heart, Users, TrendingDown,
   BarChart3, Wallet, Route, X, Car, Footprints, Sunrise, Sun, Sunset,
-  Bike, Anchor,
+  Bike, Anchor, Accessibility as AccessibilityIcon,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
+import AccessibilityScreen from './AccessibilityScreen';
+import TrustedContactsScreen from './TrustedContactsScreen';
 
 // ─── Animations ──────────────────────────────────────────────────────────────
 const stagger = { hidden: {}, show: { transition: { staggerChildren: 0.08 } } };
@@ -1025,6 +1027,7 @@ function RouteCard({ route }: { route: RouteEntry }) {
 // ─── ProfileScreen ────────────────────────────────────────────────────────────
 const ProfileScreen = () => {
   const { user } = useAuth();
+  const [profileSubPage, setProfileSubPage] = useState<'main' | 'accessibility' | 'contacts'>('main');
 
   const [savedRoutes, setSavedRoutes] = useState<RouteEntry[]>(defaultRoutes);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -1061,6 +1064,31 @@ const ProfileScreen = () => {
         )}
       </AnimatePresence>
 
+      {profileSubPage === 'accessibility' ? (
+        <div>
+          <motion.button
+            whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+            onClick={() => setProfileSubPage('main')}
+            className="flex items-center gap-2 text-sm font-semibold text-gray-500 hover:text-gray-900 mb-4 transition-colors"
+          >
+            <ChevronRight size={16} className="rotate-180" />
+            Back to Profile
+          </motion.button>
+          <AccessibilityScreen />
+        </div>
+      ) : profileSubPage === 'contacts' ? (
+        <div>
+          <motion.button
+            whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+            onClick={() => setProfileSubPage('main')}
+            className="flex items-center gap-2 text-sm font-semibold text-gray-500 hover:text-gray-900 mb-4 transition-colors"
+          >
+            <ChevronRight size={16} className="rotate-180" />
+            Back to Profile
+          </motion.button>
+          <TrustedContactsScreen />
+        </div>
+      ) : (
       <motion.div variants={stagger} initial="hidden" animate="show" className="w-full max-w-[1200px] mx-auto pb-10">
         {/* Header */}
         <motion.div variants={fadeUp} className="mb-10">
@@ -1209,13 +1237,61 @@ const ProfileScreen = () => {
                 <Globe size={18} className="text-gray-400" strokeWidth={2.5} />
                 <h3 className="font-bold text-lg text-gray-900">Language</h3>
               </div>
-              <div className="flex gap-2">
-                {[{ key: 'english', label: 'English' }, { key: 'hindi', label: 'हिंदी' }, { key: 'marathi', label: 'मराठी' }].map(l => (
-                  <motion.button key={l.key} whileTap={{ scale: 0.95 }} onClick={() => setLang(l.key)}
-                    className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all ${lang === l.key ? 'bg-[#1b3a2a] text-white shadow-sm' : 'bg-gray-50 text-gray-500 border border-gray-200 hover:bg-gray-100'}`}>
+              <div className="flex gap-2 flex-wrap">
+                {[
+                  { key: 'english', label: 'English' },
+                  { key: 'hindi', label: 'हिंदी' },
+                  { key: 'marathi', label: 'मराठी' },
+                  { key: 'gujarati', label: 'ગુજરાતી' },
+                  { key: 'tamil', label: 'தமிழ்' },
+                  { key: 'telugu', label: 'తెలుగు' },
+                  { key: 'bengali', label: 'বাংলা' },
+                ].map(l => (
+                  <motion.button key={l.key} whileTap={{ scale: 0.95 }} onClick={() => { setLang(l.key); try { const { setLanguage } = require('@/lib/i18n'); setLanguage(l.key); } catch {} }}
+                    className={`px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${lang === l.key ? 'bg-[#1b3a2a] text-white shadow-sm' : 'bg-gray-50 text-gray-500 border border-gray-200 hover:bg-gray-100'}`}>
                     {l.label}
                   </motion.button>
                 ))}
+              </div>
+            </motion.div>
+
+            {/* Accessibility */}
+            <motion.div
+              variants={fadeUp}
+              onClick={() => setProfileSubPage('accessibility')}
+              className="bg-white rounded-[28px] p-7 shadow-sm border border-gray-100 cursor-pointer hover:shadow-md transition-shadow"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-purple-50 border border-purple-200 flex items-center justify-center">
+                    <AccessibilityIcon size={18} className="text-purple-600" strokeWidth={2.5} />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-base text-gray-900">Accessibility</h3>
+                    <p className="text-xs text-gray-400 mt-0.5">Visual, hearing & mobility settings</p>
+                  </div>
+                </div>
+                <ChevronRight size={18} className="text-gray-300" />
+              </div>
+            </motion.div>
+
+            {/* Trusted Contacts */}
+            <motion.div
+              variants={fadeUp}
+              onClick={() => setProfileSubPage('contacts')}
+              className="bg-white rounded-[28px] p-7 shadow-sm border border-gray-100 cursor-pointer hover:shadow-md transition-shadow"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-rose-50 border border-rose-200 flex items-center justify-center">
+                    <Heart size={18} className="text-rose-600" strokeWidth={2.5} />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-base text-gray-900">Trusted Contacts</h3>
+                    <p className="text-xs text-gray-400 mt-0.5">Share journey & emergency contacts</p>
+                  </div>
+                </div>
+                <ChevronRight size={18} className="text-gray-300" />
               </div>
             </motion.div>
 
@@ -1248,6 +1324,7 @@ const ProfileScreen = () => {
           </div>
         </div>
       </motion.div>
+      )}
     </>
   );
 };

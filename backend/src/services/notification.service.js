@@ -1,211 +1,184 @@
-const haversineDistance = (lat1, lng1, lat2, lng2) => {
-  const R = 6371;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLng = ((lng2 - lng1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLng / 2) *
-      Math.sin(dLng / 2);
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-};
+const db = require('../config/database');
+const logger = require('../utils/logger');
 
-const ALERT_TEMPLATES = [
-  {
-    type: "accident",
-    title: "Accident reported",
-    severity: "high",
-    message: "Heavy traffic due to accident",
-    locations: [
-      { name: "Andheri East", lat: 19.1136, lng: 72.8697 },
-      { name: "Bandra West", lat: 19.0596, lng: 72.8295 },
-      { name: "Powai", lat: 19.1176, lng: 72.9060 },
-      { name: "Worli", lat: 19.0176, lng: 72.8162 },
-    ],
-  },
-  {
-    type: "metro_delay",
-    title: "Metro delay",
-    severity: "medium",
-    message: "5 min delay on Line 1",
-    locations: [
-      { name: "Ghatkopar", lat: 19.0862, lng: 72.9081 },
-      { name: "Kurla", lat: 19.0728, lng: 72.8826 },
-      { name: "Chembur", lat: 19.0626, lng: 72.8991 },
-      { name: "Mankhurd", lat: 19.0430, lng: 72.9340 },
-    ],
-  },
-  {
-    type: "crowd",
-    title: "High crowd density",
-    severity: "medium",
-    message: "Crowded station during peak hours",
-    locations: [
-      { name: "Dadar", lat: 19.0196, lng: 72.8434 },
-      { name: "CSMT", lat: 18.9398, lng: 72.8354 },
-      { name: "Borivali", lat: 19.2307, lng: 72.8567 },
-      { name: "Thane", lat: 19.1876, lng: 72.9776 },
-    ],
-  },
-  {
-    type: "traffic",
-    title: "Heavy traffic",
-    severity: "high",
-    message: "Congestion on major road",
-    locations: [
-      { name: "Western Express Highway", lat: 19.1020, lng: 72.8740 },
-      { name: "Eastern Express Highway", lat: 19.0650, lng: 72.8750 },
-      { name: "SV Road", lat: 19.1350, lng: 72.8450 },
-      { name: "Linking Road", lat: 19.0540, lng: 72.8310 },
-    ],
-  },
-  {
-    type: "signal_failure",
-    title: "Signal failure",
-    severity: "high",
-    message: "Train services affected",
-    locations: [
-      { name: "Khar Road", lat: 19.0710, lng: 72.8340 },
-      { name: "Santacruz", lat: 19.0825, lng: 72.8417 },
-    ],
-  },
-  {
-    type: "road_closure",
-    title: "Road closure",
-    severity: "medium",
-    message: "Road closed for maintenance",
-    locations: [
-      { name: "Marine Drive", lat: 18.9432, lng: 72.8234 },
-      { name: "Cuffe Parade", lat: 18.9147, lng: 72.8119 },
-    ],
-  },
-];
+async function createNotification(userId, { type, title, message, data }) {
+  try {
+    const notification = db.insert('notifications', {
+      userId,
+      type: type || 'general',
+      title,
+      message,
+      data: data || {},
+      read: false,
+      readAt: null,
+    });
 
-const PREDICTION_TEMPLATES = [
-  {
-    type: "prediction",
-    title: "Delay expected",
-    location: "Western Line",
-    message: "High probability of delay in next 15 mins",
-    confidence: 0.82,
-    severity: "high",
-    coordinates: { lat: 19.0500, lng: 72.8400 },
-  },
-  {
-    type: "prediction",
-    title: "Crowd surge warning",
-    location: "Central Line",
-    message: "Expected crowd surge in next 30 mins at Dadar",
-    confidence: 0.75,
-    severity: "medium",
-    coordinates: { lat: 19.0196, lng: 72.8434 },
-  },
-  {
-    type: "prediction",
-    title: "Rain impact likely",
-    location: "Harbour Line",
-    message: "Possible slowdown due to weather in next 45 mins",
-    confidence: 0.68,
-    severity: "medium",
-    coordinates: { lat: 19.0330, lng: 72.8600 },
-  },
-  {
-    type: "prediction",
-    title: "Peak hour congestion",
-    location: "Metro Line 1",
-    message: "Congestion expected in next 20 mins",
-    confidence: 0.90,
-    severity: "low",
-    coordinates: { lat: 19.0862, lng: 72.9081 },
-  },
-];
+    logger.info(`Notification created for user ${userId}: ${title}`);
+    return notification;
+  } catch (err) {
+    logger.error('Error creating notification:', err.message);
+    throw err;
+  }
+}
 
-function generateNearbyAlerts(userLocation) {
-  const { lat, lng } = userLocation;
-  const alerts = [];
-  let id = 1;
+async function getNotifications(userId, filter) {
+  try {
+    let notifications = db.findAll('notifications', { userId });
 
-  for (const template of ALERT_TEMPLATES) {
-    const numLocations = Math.floor(Math.random() * 2) + 1;
-    const shuffled = [...template.locations].sort(() => 0.5 - Math.random());
-    const selected = shuffled.slice(0, numLocations);
+    if (filter) {
+      if (filter.type) {
+        notifications = notifications.filter(n => n.type === filter.type);
+      }
+      if (filter.severity) {
+        notifications = notifications.filter(n => n.data?.severity === filter.severity);
+      }
+      if (filter.read !== undefined) {
+        notifications = notifications.filter(n => n.read === filter.read);
+      }
+    }
 
-    for (const loc of selected) {
-      const distance = parseFloat(
-        haversineDistance(lat, lng, loc.lat, loc.lng).toFixed(1)
-      );
+    notifications.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    return notifications;
+  } catch (err) {
+    logger.error('Error getting notifications:', err.message);
+    return [];
+  }
+}
 
-      alerts.push({
-        id: id++,
-        type: template.type,
-        title: template.title,
-        location: loc.name,
-        distance,
-        severity: template.severity,
-        message: template.message,
-        coordinates: { lat: loc.lat, lng: loc.lng },
-        timestamp: new Date().toISOString(),
+async function markRead(notificationId) {
+  try {
+    const notification = db.findOne('notifications', { id: notificationId });
+    if (!notification) {
+      logger.warn(`Notification ${notificationId} not found`);
+      return null;
+    }
+
+    const updated = db.update('notifications', { id: notificationId }, {
+      read: true,
+      readAt: new Date().toISOString(),
+    });
+
+    logger.info(`Notification ${notificationId} marked as read`);
+    return updated;
+  } catch (err) {
+    logger.error('Error marking notification read:', err.message);
+    throw err;
+  }
+}
+
+async function generateSmartNotifications(journeyTrackingId, weatherData, trafficData) {
+  try {
+    const tracking = db.findOne('live_tracking', { id: journeyTrackingId });
+    if (!tracking) {
+      logger.warn(`Tracking ${journeyTrackingId} not found for smart notifications`);
+      return [];
+    }
+
+    const notifications = [];
+    const now = new Date();
+
+    const hasRain = weatherData && (
+      weatherData.condition?.toLowerCase().includes('rain') ||
+      weatherData.condition?.toLowerCase().includes('drizzle') ||
+      weatherData.impact > 0
+    );
+    if (hasRain) {
+      notifications.push({
+        type: 'weather',
+        title: 'Rain ahead',
+        message: 'Rain expected on your route. Carry an umbrella and allow extra time.',
+        severity: 'medium',
+        data: { weatherData },
+        timestamp: now.toISOString(),
       });
     }
-  }
 
-  return alerts;
-}
-
-function predictDelays(userLocation) {
-  const { lat, lng } = userLocation;
-  const predictions = [];
-
-  const numPredictions = Math.floor(Math.random() * 2) + 2;
-  const shuffled = [...PREDICTION_TEMPLATES].sort(() => 0.5 - Math.random());
-  const selected = shuffled.slice(0, numPredictions);
-
-  for (const pred of selected) {
-    const distance = parseFloat(
-      haversineDistance(lat, lng, pred.coordinates.lat, pred.coordinates.lng).toFixed(1)
+    const hasCongestion = trafficData && (
+      trafficData.congestionLevel === 'high' ||
+      (trafficData.delay && trafficData.delay > 5)
     );
+    if (hasCongestion) {
+      notifications.push({
+        type: 'traffic',
+        title: 'Heavy traffic',
+        message: `Traffic congestion detected${trafficData.delay ? `, adding ~${trafficData.delay} min` : ''}. Consider alternate routes.`,
+        severity: 'high',
+        data: { trafficData },
+        timestamp: now.toISOString(),
+      });
+    }
 
-    predictions.push({
-      id: `pred-${pred.location.toLowerCase().replace(/\s+/g, "-")}`,
-      type: pred.type,
-      title: pred.title,
-      location: pred.location,
-      distance,
-      severity: pred.severity,
-      message: pred.message,
-      confidence: pred.confidence,
-      coordinates: pred.coordinates,
-      timestamp: new Date().toISOString(),
-    });
+    const departureTime = tracking.routeData?.departureTime || tracking.startTime;
+    if (departureTime) {
+      const depMs = new Date(departureTime).getTime();
+      const diffMin = (depMs - now.getTime()) / 60000;
+      if (diffMin > 0 && diffMin <= 15) {
+        notifications.push({
+          type: 'departure',
+          title: 'Leave now',
+          message: `Your departure window is approaching. Leave in ${Math.round(diffMin)} min to stay on schedule.`,
+          severity: 'high',
+          data: { departureTime },
+          timestamp: now.toISOString(),
+        });
+      }
+    }
+
+    const metroSteps = (tracking.stages || []).filter(s => s.mode === 'metro');
+    if (metroSteps.length > 0 && Math.random() > 0.5) {
+      notifications.push({
+        type: 'disruption',
+        title: 'Metro delayed',
+        message: `Minor delay detected on Metro line. Expect +${Math.floor(Math.random() * 5) + 2} min.`,
+        severity: 'medium',
+        data: { mode: 'metro', delay: Math.floor(Math.random() * 5) + 2 },
+        timestamp: now.toISOString(),
+      });
+    }
+
+    if (tracking.remainingTime !== undefined && tracking.remainingTime <= 5 && tracking.remainingTime > 0) {
+      notifications.push({
+        type: 'arrival',
+        title: 'Destination nearby',
+        message: 'You are almost at your destination. Get ready to alight.',
+        severity: 'low',
+        data: { remainingTime: tracking.remainingTime },
+        timestamp: now.toISOString(),
+      });
+    }
+
+    if (tracking.status === 'completed') {
+      notifications.push({
+        type: 'journey_end',
+        title: 'Journey completed',
+        message: 'You have reached your destination. Have a great day!',
+        severity: 'low',
+        data: {},
+        timestamp: now.toISOString(),
+      });
+    }
+
+    if (tracking.lateArrival) {
+      notifications.push({
+        type: 'delay',
+        title: 'Route changed',
+        message: 'You are running late. Consider a faster alternate route.',
+        severity: 'medium',
+        data: { lateArrival: true },
+        timestamp: now.toISOString(),
+      });
+    }
+
+    return notifications;
+  } catch (err) {
+    logger.error('Error generating smart notifications:', err.message);
+    return [];
   }
-
-  return predictions;
-}
-
-function getAllNotifications(userLocation) {
-  const alerts = generateNearbyAlerts(userLocation);
-  const predictions = predictDelays(userLocation);
-  const combined = [...alerts, ...predictions];
-
-  const severityOrder = { high: 0, medium: 1, low: 2 };
-
-  combined.sort((a, b) => {
-    const sevDiff = (severityOrder[a.severity] ?? 3) - (severityOrder[b.severity] ?? 3);
-    if (sevDiff !== 0) return sevDiff;
-    return a.distance - b.distance;
-  });
-
-  return combined;
-}
-
-function filterByDistance(notifications, maxKm = 5) {
-  return notifications.filter((n) => n.distance <= maxKm);
 }
 
 module.exports = {
-  generateNearbyAlerts,
-  predictDelays,
-  getAllNotifications,
-  filterByDistance,
+  createNotification,
+  getNotifications,
+  markRead,
+  generateSmartNotifications,
 };

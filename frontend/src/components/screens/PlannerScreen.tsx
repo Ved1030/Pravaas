@@ -1,27 +1,23 @@
-// src/components/screens/PlannerScreen.tsx
-// ─── CHANGES FROM ORIGINAL ─────────────────────────────────────────────────────
-//  1. Import ScheduleModal + RouteResult type used for it
-//  2. Added useState: scheduleOpen, routeToSchedule
-//  3. Added "Schedule Route" secondary button on each route card
-//  4. Added <ScheduleModal /> at bottom of JSX
-//  Everything else is 100% unchanged.
-// ─────────────────────────────────────────────────────────────────────────────────
-
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   MapPin, Flag, ArrowUpDown, Zap, IndianRupee, Users,
   Train, Bus, Car, Footprints, Clock, ChevronDown,
   ChevronRight, Shield, ArrowRight, Sparkles, Gauge,
-  Search, Loader2, CalendarPlus, Calendar,
+  Search, Loader2, CalendarPlus, Calendar, Brain,
+  AlertTriangle,
 } from 'lucide-react';
 import SegmentBar from '@/components/SegmentBar';
 import { routeResults as mockRouteResults } from '@/lib/mock-data';
-import { planRoute, getConnectionStateMessage, onConnectionStateChange, getConnectionState, type ConnectionState, type BackendRoute, type AIRecommendation } from '@/lib/api';
-import type { RouteResult, RouteSegment } from '@/lib/types';
-import ScheduleModal from '@/components/ui/ScheduleModal'; // ← NEW
+import { planRoute, getConnectionStateMessage, onConnectionStateChange, getConnectionState, type ConnectionState, type BackendRoute, type AIRecommendation, aiRecommendRoute, aiLeaveTime } from '@/lib/api';
+import type { RouteResult, RouteSegment, AIRecommendationResponse, AILeaveTimeResponse } from '@/lib/types';
+import ScheduleModal from '@/components/ui/ScheduleModal';
+import ComfortScore from '@/components/ComfortScore';
+import CrowdIndicator from '@/components/CrowdIndicator';
+import WeatherImpact from '@/components/WeatherImpact';
+import AIInsightPanel from '@/components/AIInsightPanel';
+import WomenSafetyToggle from '@/components/WomenSafetyToggle';
 
-// ── Unchanged config ──────────────────────────────────────────────────────────
 const stagger = { hidden: {}, show: { transition: { staggerChildren: 0.08 } } };
 const fadeUp = {
   hidden: { opacity: 0, y: 15 },
@@ -47,7 +43,13 @@ const trafficConfig: Record<string, { color: string; bg: string; label: string }
   high: { color: 'text-red-600', bg: 'bg-red-50', label: 'HIGH' },
 };
 
-// ── Backend adapter (unchanged) ───────────────────────────────────────────────
+const delayConfig: Record<string, { text: string; bg: string; label: string }> = {
+  very_low: { text: 'text-emerald-600', bg: 'bg-emerald-50', label: 'Very Low' },
+  low: { text: 'text-green-600', bg: 'bg-green-50', label: 'Low' },
+  medium: { text: 'text-amber-600', bg: 'bg-amber-50', label: 'Medium' },
+  high: { text: 'text-red-600', bg: 'bg-red-50', label: 'High' },
+};
+
 function adaptBackendRoute(r: BackendRoute, idx: number, recommendation?: AIRecommendation | null): RouteResult {
   const badgeColorMap: Record<string, string> = { fastest: 'accent', cheapest: 'success', comfort: 'muted' };
   const modeMap: Record<string, any> = { metro: 'metro', bus: 'bus', auto: 'auto', walk: 'walk', cab: 'auto', train: 'metro' };
@@ -78,9 +80,6 @@ function adaptBackendRoute(r: BackendRoute, idx: number, recommendation?: AIReco
   };
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// PLANNER SCREEN
-// ══════════════════════════════════════════════════════════════════════════════
 const PlannerScreen = () => {
   const [timeMode, setTimeMode] = useState<'now' | 'depart' | 'arrive'>('now');
   const [speed, setSpeed] = useState(70);
@@ -88,12 +87,11 @@ const PlannerScreen = () => {
   const [comfort, setComfort] = useState(30);
   const [modes, setModes] = useState({ metro: true, bus: true, auto: true, walk: true });
   const [expandedRoute, setExpandedRoute] = useState<string | null>(null);
+  const [womenSafe, setWomenSafe] = useState(false);
 
-  // Time Inputs
   const [selectedTime, setSelectedTime] = useState('');
   const [selectedDate, setSelectedDate] = useState('');
 
-  // ── Backend state (unchanged) ──
   const [origin, setOrigin] = useState('Andheri Station');
   const [dest, setDest] = useState('BKC, Mumbai');
   const [apiLoading, setApiLoading] = useState(false);
@@ -103,11 +101,15 @@ const PlannerScreen = () => {
   const [aiRecommendation, setAiRecommendation] = useState<AIRecommendation | null>(null);
   const [connState, setConnState] = useState<ConnectionState>(getConnectionState());
 
+  const [aiData, setAiData] = useState<AIRecommendationResponse | null>(null);
+  const [leaveTimeData, setLeaveTimeData] = useState<AILeaveTimeResponse | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiExpanded, setAiExpanded] = useState(false);
+
   useEffect(() => {
     return onConnectionStateChange(setConnState);
   }, []);
 
-  // ── NEW: Schedule modal state ──────────────────────────────────────────────
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [routeToSchedule, setRouteToSchedule] = useState<RouteResult | null>(null);
 
@@ -119,6 +121,9 @@ const PlannerScreen = () => {
     if (!src || !dst) return;
     setApiError(null);
     setApiLoading(true);
+    setAiData(null);
+    setLeaveTimeData(null);
+    setAiExpanded(false);
     try {
       const data = await planRoute(src, dst, { speed, cost, comfort });
       const routes = data?.routes || [];
@@ -127,6 +132,12 @@ const PlannerScreen = () => {
       setDistKm(data?.distanceKm || null);
       setAiRecommendation(recommended);
       setExpandedRoute(null);
+
+      setAiLoading(true);
+      Promise.all([
+        aiRecommendRoute(src, dst, { speed, cost, comfort }).then((ai) => setAiData(ai?.aiRecommendation || null)).catch(() => {}),
+        aiLeaveTime(src, dst, { speed, cost, comfort }).then((lt) => setLeaveTimeData(lt)).catch(() => {}),
+      ]).finally(() => setAiLoading(false));
     } catch (err) {
       setApiError(getConnectionStateMessage(connState) || 'Backend unavailable — showing demo data.');
       setLiveRoutes(null);
@@ -151,7 +162,6 @@ const PlannerScreen = () => {
     { icon: Users, label: 'Comfort', value: comfort, set: setComfort, color: 'text-amber-600', track: 'bg-amber-500', trackBg: 'bg-amber-100' },
   ];
 
-  // ── NEW: open schedule modal for a specific route ──────────────────────────
   const handleScheduleRoute = (route: RouteResult) => {
     setRouteToSchedule({
       ...route,
@@ -161,6 +171,11 @@ const PlannerScreen = () => {
     setScheduleOpen(true);
   };
 
+  const aiRecommendationData = useMemo(() => {
+    if (!aiRecommendation || !aiData) return null;
+    return aiData;
+  }, [aiData, aiRecommendation]);
+
   return (
     <>
       <motion.div
@@ -169,7 +184,6 @@ const PlannerScreen = () => {
         animate="show"
         className="w-full max-w-[1200px] mx-auto pb-10"
       >
-        {/* ─── Header (unchanged) ─── */}
         <motion.div variants={fadeUp} className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 tracking-tight mb-1">Route Planner</h1>
           <p className="text-gray-500 font-medium">Find the best way to get where you're going</p>
@@ -177,16 +191,11 @@ const PlannerScreen = () => {
 
         <div className="grid grid-cols-1 xl:grid-cols-[420px_1fr] gap-8">
 
-          {/* ═══════════════════════════════════════════
-              LEFT COLUMN — Search + Preferences (unchanged)
-             ═══════════════════════════════════════════ */}
           <div className="space-y-6">
 
-            {/* Search Card */}
             <motion.div variants={fadeUp} className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
               <h3 className="font-semibold text-base text-gray-900 mb-5">Plan Your Route</h3>
 
-              {/* Origin */}
               <div className="flex items-center gap-3 mb-1">
                 <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center flex-shrink-0">
                   <MapPin size={17} strokeWidth={2.5} className="text-blue-600" />
@@ -201,7 +210,6 @@ const PlannerScreen = () => {
                 />
               </div>
 
-              {/* Connector + Swap */}
               <div className="flex items-center justify-between pl-4 h-8 relative">
                 <div className="border-l-2 border-dashed border-gray-200 h-full" />
                 <motion.button
@@ -214,7 +222,6 @@ const PlannerScreen = () => {
                 </motion.button>
               </div>
 
-              {/* Destination */}
               <div className="flex items-center gap-3 mt-1">
                 <div className="w-10 h-10 rounded-xl bg-red-50 border border-red-200 flex items-center justify-center flex-shrink-0">
                   <Flag size={17} strokeWidth={2.5} className="text-red-500" />
@@ -229,62 +236,12 @@ const PlannerScreen = () => {
                 />
               </div>
 
-              {/* Time Mode */}
-              {/* <div className="flex gap-2 mt-5">
-                {(['now', 'depart', 'arrive'] as const).map((m) => {
-                  const active = timeMode === m;
-                  return (
-                    <motion.button
-                      key={m}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => setTimeMode(m)}
-                      className={`flex-1 py-2 rounded-lg text-xs font-bold tracking-wide transition-all ${active
-                        ? 'bg-[#1b3a2a] text-white shadow-sm'
-                        : 'bg-gray-50 text-gray-500 border border-gray-200 hover:bg-gray-100'
-                        }`}
-                    >
-                      {m === 'now' ? 'Now' : m === 'depart' ? 'Depart At' : 'Arrive By'}
-                    </motion.button>
-                  );
-                })}
-              </div> */}
-
-              {/* Date/Time Pickers for Depart/Arrive */}
-              {/* {timeMode !== 'now' && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  className="flex gap-3 mt-4"
-                >
-                  <div className="flex-1 flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-xl border border-gray-200">
-                    <Calendar size={14} className="text-gray-400" />
-                    <input
-                      type="date"
-                      value={selectedDate}
-                      onChange={(e) => setSelectedDate(e.target.value)}
-                      className="w-full bg-transparent text-sm font-medium text-gray-900 outline-none"
-                    />
-                  </div>
-                  <div className="flex-1 flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-xl border border-gray-200">
-                    <Clock size={14} className="text-gray-400" />
-                    <input
-                      type="time"
-                      value={selectedTime}
-                      onChange={(e) => setSelectedTime(e.target.value)}
-                      className="w-full bg-transparent text-sm font-medium text-gray-900 outline-none"
-                    />
-                  </div>
-                </motion.div>
-              )} */}
-
-              {/* API error */}
               {apiError && (
                 <p className="mt-4 text-xs font-medium text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
                   ⚠ {apiError}
                 </p>
               )}
 
-              {/* Plan button */}
               <motion.button
                 whileHover={{ scale: 1.01 }}
                 whileTap={{ scale: 0.98 }}
@@ -300,7 +257,6 @@ const PlannerScreen = () => {
               </motion.button>
             </motion.div>
 
-            {/* Preferences Card (unchanged) */}
             <motion.div variants={fadeUp} className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
               <h3 className="font-semibold text-base text-gray-900 mb-5">Route Preferences</h3>
 
@@ -354,7 +310,7 @@ const PlannerScreen = () => {
 
               <div className="mt-5 pt-5 border-t border-gray-100">
                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Transport Modes</p>
-                <div className="flex gap-2">
+                <div className="flex gap-2 mb-4">
                   {(Object.keys(modeConfig) as Array<keyof typeof modeConfig>).map((m) => {
                     const cfg = modeConfig[m];
                     const Icon = cfg.icon;
@@ -375,16 +331,15 @@ const PlannerScreen = () => {
                     );
                   })}
                 </div>
+                <div className="mt-4">
+                  <WomenSafetyToggle enabled={womenSafe} onToggle={setWomenSafe} />
+                </div>
               </div>
             </motion.div>
           </div>
 
-          {/* ═══════════════════════════════════════════
-              RIGHT COLUMN — Route Results
-             ═══════════════════════════════════════════ */}
           <div className="space-y-5">
 
-            {/* Results header */}
             <motion.div variants={fadeUp} className="flex items-center justify-between">
               <p className="text-sm font-medium text-gray-500">
                 <span className="font-bold text-gray-900">{routeResults.length}</span> routes found
@@ -396,7 +351,37 @@ const PlannerScreen = () => {
               </button>
             </motion.div>
 
-            {/* ─── Route Cards ─── */}
+            {leaveTimeData && liveRoutes && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-gradient-to-r from-[#1b3a2a] to-[#2c5f45] rounded-2xl p-5 text-white shadow-sm"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <Clock size={14} className="text-[#c5f02c]" />
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-[#c5f02c]">Smart Leave Time</span>
+                    </div>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-3xl font-black tracking-tight">{leaveTimeData.leaveByFormatted}</span>
+                      <span className="text-sm text-white/70">({leaveTimeData.bufferMinutes} min buffer)</span>
+                    </div>
+                    <p className="text-xs text-white/60 mt-1">
+                      Arrive by {leaveTimeData.arriveByFormatted} · {leaveTimeData.totalDuration} min trip
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    {leaveTimeData.reasons.slice(0, 2).map((r, i) => (
+                      <p key={i} className="text-[10px] text-white/70 flex items-center gap-1 justify-end">
+                        <AlertTriangle size={8} className="text-[#c5f02c]" /> {r}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
             {(routeResults || []).map((route) => {
               const badge = badgeConfig[route.badgeColor] || badgeConfig.muted;
               const BadgeIcon = badge.icon;
@@ -408,6 +393,11 @@ const PlannerScreen = () => {
               const segments = route.segments || [];
               const legs = (route as any).transfers !== undefined ? (route as any).transfers + 1 : segments.length;
 
+              const routeAiData = isRecommended && aiData ? aiData : null;
+              const delayRisk = routeAiData?.delayPrediction;
+              const comfortData = routeAiData?.comfort;
+              const weatherData = routeAiData?.weather;
+
               return (
                 <motion.div
                   key={route.id}
@@ -418,7 +408,6 @@ const PlannerScreen = () => {
                     }`}
                 >
                   <div className="p-6">
-                    {/* Badge + Time */}
                     <div className="flex items-center justify-between mb-4">
                       <div className={`${badge.bg} ${badge.text} px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5`}>
                         <BadgeIcon size={12} strokeWidth={3} />
@@ -445,7 +434,6 @@ const PlannerScreen = () => {
                       </div>
                     </div>
 
-                    {/* AI explanation */}
                     {isRecommended && explanation && (
                       <motion.div
                         initial={{ opacity: 0, y: -5 }}
@@ -459,7 +447,6 @@ const PlannerScreen = () => {
                       </motion.div>
                     )}
 
-                    {/* Insight pills */}
                     {isRecommended && liveRoutes && route.insights && (
                       <div className="flex flex-wrap gap-2 mt-2 mb-3">
                         {route.insights.timeSaved > 0 && (
@@ -477,7 +464,6 @@ const PlannerScreen = () => {
                       </div>
                     )}
 
-                    {/* Saved time badge */}
                     {isRecommended && savedTime && savedTime > 0 && (
                       <div className="mb-4 bg-blue-50 border border-blue-200 rounded-xl px-3 py-2 flex items-center gap-2">
                         <Zap size={14} className="text-blue-600" />
@@ -485,10 +471,8 @@ const PlannerScreen = () => {
                       </div>
                     )}
 
-                    {/* Segment Bar */}
                     <SegmentBar segments={segments} />
 
-                    {/* Info chips */}
                     <div className="flex items-center gap-2 mt-4 flex-wrap">
                       <div className="bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 flex items-center gap-1.5">
                         <ArrowRight size={12} className="text-gray-400" />
@@ -504,13 +488,25 @@ const PlannerScreen = () => {
                         <Shield size={12} className="text-emerald-600" strokeWidth={2.5} />
                         <span className="text-[11px] font-bold text-emerald-600 tabular-nums">{route.confidence}%</span>
                       </div>
+                      {delayRisk && (
+                        <div className={`${delayRisk.color.bg} border rounded-lg px-2.5 py-1.5 flex items-center gap-1.5`}>
+                          <AlertTriangle size={12} className={delayRisk.color.text} strokeWidth={2.5} />
+                          <span className={`text-[11px] font-bold ${delayRisk.color.text}`}>
+                            {delayRisk.probability}%
+                          </span>
+                        </div>
+                      )}
+                      {comfortData && (
+                        <div className="flex items-center gap-1">
+                          <ComfortScore score={comfortData.score} size={28} strokeWidth={3} />
+                        </div>
+                      )}
+                      {weatherData && (
+                        <WeatherImpact weather={weatherData} compact />
+                      )}
                     </div>
 
-                    {/* ─── ACTION BUTTONS ROW ──────────────────────────────────
-                        Select button (unchanged) + NEW Schedule button
-                    ─────────────────────────────────────────────────────────── */}
                     <div className="flex gap-3 mt-5">
-                      {/* Select This Route (unchanged) */}
                       <motion.button
                         whileHover={{ scale: 1.01 }}
                         whileTap={{ scale: 0.98 }}
@@ -526,7 +522,6 @@ const PlannerScreen = () => {
                         }
                       </motion.button>
 
-                      {/* ── NEW: Schedule Route button ── */}
                       <motion.button
                         whileHover={{ scale: 1.01 }}
                         whileTap={{ scale: 0.98 }}
@@ -544,7 +539,6 @@ const PlannerScreen = () => {
                     </div>
                   </div>
 
-                  {/* Expanded Steps (unchanged) */}
                   <AnimatePresence>
                     {isExpanded && (
                       <motion.div
@@ -560,6 +554,10 @@ const PlannerScreen = () => {
                               const modeKey = seg.mode as keyof typeof modeConfig;
                               const cfg = modeConfig[modeKey] || modeConfig.walk;
                               const StepIcon = cfg.icon;
+
+                              const segCrowd = routeAiData?.crowd?.[i];
+                              const segWeather = routeAiData?.weather?.routeImpact?.segments?.[i];
+
                               return (
                                 <motion.div
                                   key={i}
@@ -584,12 +582,78 @@ const PlannerScreen = () => {
                                         {seg.duration || seg.label.match(/\d+/)?.[0]} min
                                       </span>
                                     </div>
-                                    <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{seg.detail}</p>
+                                    <div className="flex items-center gap-2 mt-1">
+                                      <p className="text-xs text-gray-500 leading-relaxed">{seg.detail}</p>
+                                      {segCrowd && <CrowdIndicator level={segCrowd.level} size="sm" />}
+                                      {segWeather && segWeather.delayImpact > 0 && (
+                                        <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">
+                                          +{segWeather.delayImpact}min
+                                        </span>
+                                      )}
+                                    </div>
                                   </div>
                                 </motion.div>
                               );
                             })}
                           </div>
+
+                          {routeAiData && (
+                            <div className="mt-3">
+                              <button
+                                onClick={() => setAiExpanded(!aiExpanded)}
+                                className="w-full flex items-center justify-between p-3 bg-[#f0f7f2] rounded-xl border border-[#1b3a2a]/10 hover:bg-[#e6f0ea] transition-colors"
+                              >
+                                <div className="flex items-center gap-2">
+                                  <Brain size={14} className="text-[#1b3a2a]" />
+                                  <span className="text-xs font-bold text-[#1b3a2a]">AI Analysis</span>
+                                </div>
+                                <motion.div
+                                  animate={{ rotate: aiExpanded ? 180 : 0 }}
+                                  transition={{ duration: 0.2 }}
+                                >
+                                  <ChevronDown size={14} className="text-[#1b3a2a]" />
+                                </motion.div>
+                              </button>
+                              <AnimatePresence>
+                                {aiExpanded && (
+                                  <motion.div
+                                    initial={{ height: 0, opacity: 0 }}
+                                    animate={{ height: 'auto', opacity: 1 }}
+                                    exit={{ height: 0, opacity: 0 }}
+                                    transition={{ duration: 0.3 }}
+                                    className="overflow-hidden"
+                                  >
+                                    <div className="mt-2 space-y-2">
+                                      {routeAiData.reasons?.map((reason: string, ri: number) => (
+                                        <div key={ri} className="text-xs font-medium text-emerald-700 bg-emerald-50 rounded-lg px-3 py-2 flex items-center gap-1.5">
+                                          <Shield size={11} className="text-emerald-500 shrink-0" />
+                                          {reason}
+                                        </div>
+                                      ))}
+                                      <div className="grid grid-cols-2 gap-2 mt-2">
+                                        {routeAiData.delayPrediction && (
+                                          <div className="bg-white rounded-lg p-2.5 border border-gray-100">
+                                            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Delay Risk</span>
+                                            <p className={`text-sm font-bold mt-0.5 ${routeAiData.delayPrediction.color.text}`}>
+                                              {routeAiData.delayPrediction.probability}% · {routeAiData.delayPrediction.label}
+                                            </p>
+                                          </div>
+                                        )}
+                                        {routeAiData.comfort && (
+                                          <div className="bg-white rounded-lg p-2.5 border border-gray-100 flex items-center gap-2">
+                                            <div>
+                                              <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Comfort</span>
+                                              <p className="text-sm font-bold mt-0.5">{routeAiData.comfort.score}/100</p>
+                                            </div>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </motion.div>
+                                )}
+                              </AnimatePresence>
+                            </div>
+                          )}
                         </div>
                       </motion.div>
                     )}
@@ -598,7 +662,13 @@ const PlannerScreen = () => {
               );
             })}
 
-            {/* Comparison Table (unchanged) */}
+            {liveRoutes && liveRoutes.length > 0 && (
+              <AIInsightPanel
+                recommendation={aiRecommendationData}
+                loading={aiLoading}
+              />
+            )}
+
             <motion.div variants={fadeUp} className="hidden xl:block bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
               <div className="p-5 pb-3">
                 <h3 className="font-semibold text-base text-gray-900 flex items-center gap-2">
@@ -611,7 +681,7 @@ const PlannerScreen = () => {
                   <table className="w-full text-xs">
                     <thead>
                       <tr className="bg-gray-50">
-                        {['Route', 'Time', 'Cost', 'Legs', 'Traffic', 'Confidence'].map((h) => (
+                        {['Route', 'Time', 'Cost', 'Legs', 'Traffic', 'Confidence', 'Delay Risk', 'Comfort'].map((h) => (
                           <th key={h} className="px-4 py-2.5 text-left font-bold text-gray-500 uppercase tracking-wider border-b border-gray-200">{h}</th>
                         ))}
                       </tr>
@@ -620,6 +690,8 @@ const PlannerScreen = () => {
                       {(routeResults || []).map((r, i) => {
                         const trf = trafficConfig[r.trafficLevel || 'low'] || trafficConfig.low;
                         const legs = (r as any).transfers !== undefined ? (r as any).transfers + 1 : (r.segments || []).length;
+                        const routeDelayRisk = r.isRecommended && aiData ? aiData.delayPrediction : null;
+                        const routeComfort = r.isRecommended && aiData ? aiData.comfort : null;
                         return (
                           <tr key={r.id} className={`${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'} hover:bg-blue-50/50 transition-colors`}>
                             <td className="px-4 py-2.5 font-bold text-gray-900 border-b border-gray-100">{r.badge}</td>
@@ -628,6 +700,12 @@ const PlannerScreen = () => {
                             <td className="px-4 py-2.5 font-semibold text-gray-900 border-b border-gray-100">{legs}</td>
                             <td className={`px-4 py-2.5 font-bold border-b border-gray-100 ${trf.color}`}>{trf.label}</td>
                             <td className="px-4 py-2.5 font-bold text-emerald-600 border-b border-gray-100 tabular-nums">{r.confidence}%</td>
+                            <td className={`px-4 py-2.5 font-bold border-b border-gray-100 tabular-nums ${routeDelayRisk?.color?.text || 'text-gray-500'}`}>
+                              {routeDelayRisk ? `${routeDelayRisk.probability}%` : '-'}
+                            </td>
+                            <td className="px-4 py-2.5 font-bold border-b border-gray-100 tabular-nums">
+                              {routeComfort ? `${routeComfort.score}/100` : '-'}
+                            </td>
                           </tr>
                         );
                       })}
@@ -640,7 +718,6 @@ const PlannerScreen = () => {
         </div>
       </motion.div>
 
-      {/* ══ SCHEDULE MODAL (NEW — rendered outside main flow to avoid z-index issues) ══ */}
       <ScheduleModal
         isOpen={scheduleOpen}
         onClose={() => { setScheduleOpen(false); setRouteToSchedule(null); }}

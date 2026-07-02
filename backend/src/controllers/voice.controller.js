@@ -1,4 +1,6 @@
+const asyncHandler = require("../middlewares/asyncHandler");
 const { generateVoiceInstructionsForRoute } = require("../services/routeEngine");
+const voiceService = require("../services/voice.service");
 const logger = require("../utils/logger");
 
 exports.getVoiceInstructions = async (req, res) => {
@@ -18,3 +20,15 @@ exports.getVoiceInstructions = async (req, res) => {
     res.status(500).json({ error: "Failed to generate voice instructions.", details: err.message });
   }
 };
+
+exports.processCommand = asyncHandler(async (req, res) => {
+  const { userId, command, context } = req.body;
+  const result = await voiceService.processCommand(userId, { command, context });
+  res.json({ success: true, data: result });
+});
+
+exports.logInteraction = asyncHandler(async (req, res) => {
+  const { userId, command, response } = req.body;
+  const log = await voiceService.logVoiceInteraction(userId, command, response);
+  res.json({ success: true, data: log });
+});
