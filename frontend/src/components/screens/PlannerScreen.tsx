@@ -7,7 +7,7 @@
 //  Everything else is 100% unchanged.
 // ─────────────────────────────────────────────────────────────────────────────────
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   MapPin, Flag, ArrowUpDown, Zap, IndianRupee, Users,

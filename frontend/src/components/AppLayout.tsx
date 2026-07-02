@@ -23,6 +23,7 @@ import HistoryScreen from '@/components/screens/HistoryScreen';
 import ProfileScreen from '@/components/screens/ProfileScreen';
 import RouteComparisonScreen from '@/components/screens/RouteComparisonScreen';
 import NotificationsScreen from '@/components/screens/NotificationsScreen';
+import ErrorBoundary from '@/components/ErrorBoundary';
 
 const navItems = [
   { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard' },
@@ -141,7 +142,9 @@ const AppLayout = () => {
             transition={{ duration: 0.2, ease: 'easeOut' }}
             className="min-h-screen p-6 lg:p-8"
           >
-            {renderScreen()}
+            <ErrorBoundary key={activeScreen + '-eb'}>
+              {renderScreen()}
+            </ErrorBoundary>
           </motion.div>
         </AnimatePresence>
       </main>
