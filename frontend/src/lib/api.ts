@@ -2,8 +2,7 @@ import type { NotificationsResponse } from './types';
 import { apiGet, apiPost, checkBackendHealth, onConnectionStateChange, getConnectionState, getConnectionStateMessage } from '@/services/api';
 export type { ConnectionState } from '@/services/api';
 
-export { checkBackendHealth, onConnectionStateChange, getConnectionState, getConnectionStateMessage };<｜｜DSML｜｜parameter>
-
+export { checkBackendHealth, onConnectionStateChange, getConnectionState, getConnectionStateMessage };
 
 export interface RouteResource {
   type: 'walk' | 'metro' | 'bus' | 'train' | 'cab' | 'auto';
@@ -32,7 +31,7 @@ export interface BackendRoute {
   confidence: number;
   transfers: number;
   tags: string[];
-  trafficLevel: "low" | "medium" | "high";
+  trafficLevel: 'low' | 'medium' | 'high';
   predictedDelay: number;
   geometry: [number, number][];
   distanceKm: number;
