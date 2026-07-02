@@ -32,7 +32,7 @@ import {
   LocateFixed,
   Locate,
 } from 'lucide-react';
-import { planRoute, getVoiceInstructions, type BackendRoute, type RouteResource, type AIRecommendation, type VoiceInstruction } from '@/lib/api';
+import { planRoute, getVoiceInstructions, getConnectionState, getConnectionStateMessage, onConnectionStateChange, type BackendRoute, type RouteResource, type AIRecommendation, type VoiceInstruction, type ConnectionState } from '@/lib/api';
 import MapComponent, { type LatLng, type MapRoute, type MapStop, type UserLocation, normalizeCoordinates } from '@/components/MapComponent';
 import { LIVE_LOCATION_KEY } from '@/components/ui/LiveLocationCard';
 
@@ -263,6 +263,11 @@ const LiveMapScreen = () => {
   const [mapStops, setMapStops] = useState<MapStop[]>([]);
   const [segmentGeometries, setSegmentGeometries] = useState<[number, number][][]>([]);
   const [waypoints, setWaypoints] = useState<string[]>([]);
+  const [connState, setConnState] = useState<ConnectionState>(getConnectionState());
+
+  useEffect(() => {
+    return onConnectionStateChange(setConnState);
+  }, []);
 
   const speechQueueRef = useRef<number[]>([]);
   const stepDetectionRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -560,7 +565,7 @@ const LiveMapScreen = () => {
           setMapStops(newStops);
         }
       } else {
-        setError('Could not connect to the backend. The server may be starting up.');
+        setError(getConnectionStateMessage(connState) || 'Could not connect to the backend. Please try again.');
       }
 
       if (geoResult.status === 'rejected') {
@@ -715,7 +720,9 @@ const LiveMapScreen = () => {
               {loading ? (
                 <>
                   <Loader2 size={16} className="animate-spin" />
-                  Analyzing routes…
+                  {connState === 'retrying' || connState === 'waking'
+                    ? getConnectionStateMessage(connState)
+                    : 'Analyzing routes…'}
                 </>
               ) : (
                 <>
@@ -849,7 +856,11 @@ const LiveMapScreen = () => {
                 <div className="w-14 h-14 rounded-full bg-[#1b3a2a]/10 flex items-center justify-center">
                   <Loader2 size={24} className="text-[#1b3a2a] animate-spin" />
                 </div>
-                <p className="text-gray-500 font-medium text-sm">Analyzing optimal routes…</p>
+                <p className="text-gray-500 font-medium text-sm">
+                  {connState === 'retrying' || connState === 'waking'
+                    ? getConnectionStateMessage(connState)
+                    : 'Connecting...'}
+                </p>
               </motion.div>
             )}
 

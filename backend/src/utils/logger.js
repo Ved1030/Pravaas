@@ -6,10 +6,10 @@ const timestamp = () => new Date().toISOString();
 
 const logger = {
   info: (...args) => {
-    if (isDev) console.log(`[${timestamp()}] INFO:`, ...args);
+    console.log(`[${timestamp()}] INFO:`, ...args);
   },
   warn: (...args) => {
-    if (isDev) console.warn(`[${timestamp()}] WARN:`, ...args);
+    console.warn(`[${timestamp()}] WARN:`, ...args);
   },
   error: (...args) => {
     console.error(`[${timestamp()}] ERROR:`, ...args);

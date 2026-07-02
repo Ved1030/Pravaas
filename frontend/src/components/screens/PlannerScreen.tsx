@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import SegmentBar from '@/components/SegmentBar';
 import { routeResults as mockRouteResults } from '@/lib/mock-data';
-import { planRoute, type BackendRoute, type AIRecommendation } from '@/lib/api';
+import { planRoute, getConnectionStateMessage, onConnectionStateChange, getConnectionState, type ConnectionState, type BackendRoute, type AIRecommendation } from '@/lib/api';
 import type { RouteResult, RouteSegment } from '@/lib/types';
 import ScheduleModal from '@/components/ui/ScheduleModal'; // ← NEW
 
@@ -101,6 +101,11 @@ const PlannerScreen = () => {
   const [liveRoutes, setLiveRoutes] = useState<RouteResult[] | null>(null);
   const [distKm, setDistKm] = useState<number | null>(null);
   const [aiRecommendation, setAiRecommendation] = useState<AIRecommendation | null>(null);
+  const [connState, setConnState] = useState<ConnectionState>(getConnectionState());
+
+  useEffect(() => {
+    return onConnectionStateChange(setConnState);
+  }, []);
 
   // ── NEW: Schedule modal state ──────────────────────────────────────────────
   const [scheduleOpen, setScheduleOpen] = useState(false);
@@ -123,7 +128,7 @@ const PlannerScreen = () => {
       setAiRecommendation(recommended);
       setExpandedRoute(null);
     } catch (err) {
-      setApiError('Backend unavailable — showing demo data.');
+      setApiError(getConnectionStateMessage(connState) || 'Backend unavailable — showing demo data.');
       setLiveRoutes(null);
       setAiRecommendation(null);
     } finally {
@@ -289,7 +294,7 @@ const PlannerScreen = () => {
                 className="w-full mt-4 py-3 bg-[#1b3a2a] text-white rounded-xl font-semibold text-sm flex items-center justify-center gap-2 shadow-md hover:shadow-lg hover:bg-[#234d38] transition-all disabled:opacity-60"
               >
                 {apiLoading
-                  ? <><Loader2 size={18} className="animate-spin" /> Calculating…</>
+                  ? <><Loader2 size={18} className="animate-spin" /> {connState === 'retrying' || connState === 'waking' ? getConnectionStateMessage(connState) : 'Calculating…'}</>
                   : <><Search size={18} /> Find Routes</>
                 }
               </motion.button>

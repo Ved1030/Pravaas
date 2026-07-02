@@ -1,7 +1,9 @@
 import type { NotificationsResponse } from './types';
-import { apiGet, apiPost, checkBackendHealth, onConnectionStateChange, getConnectionState } from '@/services/api';
+import { apiGet, apiPost, checkBackendHealth, onConnectionStateChange, getConnectionState, getConnectionStateMessage } from '@/services/api';
+export type { ConnectionState } from '@/services/api';
 
-export { checkBackendHealth, onConnectionStateChange, getConnectionState };
+export { checkBackendHealth, onConnectionStateChange, getConnectionState, getConnectionStateMessage };<｜｜DSML｜｜parameter>
+
 
 export interface RouteResource {
   type: 'walk' | 'metro' | 'bus' | 'train' | 'cab' | 'auto';

@@ -12,7 +12,7 @@ import {
   Filter,
   X,
 } from 'lucide-react';
-import { getNotifications, checkBackendHealth, onConnectionStateChange } from '@/lib/api';
+import { getNotifications, checkBackendHealth, onConnectionStateChange, getConnectionStateMessage, type ConnectionState } from '@/lib/api';
 import type { NotificationAlert, NotificationSeverity, NotificationType } from '@/lib/types';
 import MapComponent, { type MapRoute, type AlertMarker, normalizeCoordinates } from '@/components/MapComponent';
 
@@ -110,7 +110,7 @@ const NotificationsScreen = () => {
   const [showMap, setShowMap] = useState(false);
   const [mapRoutes, setMapRoutes] = useState<MapRoute[]>([]);
   const [alertMarkers, setAlertMarkers] = useState<AlertMarker[]>([]);
-  const [connectionState, setConnectionState] = useState<string>('idle');
+  const [connectionState, setConnectionState] = useState<ConnectionState>('idle');
   const hasPushedRef = useRef<Set<string>>(new Set());
   const retryCountRef = useRef(0);
 
@@ -119,6 +119,10 @@ const NotificationsScreen = () => {
   }, []);
 
   const getErrorMessage = (err: any): string => {
+    const stateMsg = getConnectionStateMessage(connectionState);
+    if (stateMsg && connectionState !== 'connected' && connectionState !== 'idle') {
+      return stateMsg;
+    }
     if (err?.name === 'AbortError' || err?.message?.includes('timeout')) {
       return 'Server is starting up. Retrying...';
     }
@@ -425,7 +429,11 @@ const NotificationsScreen = () => {
                 <div className="w-14 h-14 rounded-full bg-[#1b3a2a]/10 flex items-center justify-center">
                   <Loader2 size={24} className="text-[#1b3a2a] animate-spin" />
                 </div>
-                <p className="text-gray-500 font-medium text-sm">Fetching nearby alerts…</p>
+                <p className="text-gray-500 font-medium text-sm">
+                  {connectionState === 'retrying' || connectionState === 'waking'
+                    ? getConnectionStateMessage(connectionState)
+                    : 'Fetching nearby alerts…'}
+                </p>
               </motion.div>
             )}
 

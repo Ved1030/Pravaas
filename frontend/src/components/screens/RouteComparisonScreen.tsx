@@ -6,7 +6,7 @@ import {
   TrendingDown, Wallet, Gauge, AlertTriangle, CheckCircle2,
   BarChart3, Train, Bus, Car, Footprints, GitCompare,
 } from 'lucide-react';
-import { planRoute, type BackendRoute, type AIRecommendation } from '@/lib/api';
+import { planRoute, getConnectionStateMessage, onConnectionStateChange, getConnectionState, type ConnectionState, type BackendRoute, type AIRecommendation } from '@/lib/api';
 
 const stagger = { hidden: {}, show: { transition: { staggerChildren: 0.08 } } };
 const fadeUp = {
@@ -126,6 +126,11 @@ const RouteComparisonScreen = () => {
   const [selectedRoute, setSelectedRoute] = useState<string | null>(null);
   const [recommended, setRecommended]     = useState<AIRecommendation | null>(null);
   const [hasSearched, setHasSearched]     = useState(false);
+  const [connState, setConnState] = useState<ConnectionState>(getConnectionState());
+
+  useEffect(() => {
+    return onConnectionStateChange(setConnState);
+  }, []);
 
   const handleCompare = async () => {
     const src = origin.trim();
@@ -144,7 +149,7 @@ const RouteComparisonScreen = () => {
       setSelectedRoute(recId || backendRoutes[0]?.id || null);
       setRecommended(data?.recommended || null);
     } catch {
-      setError('Could not connect to the backend. The server may be starting up.');
+      setError(getConnectionStateMessage(connState) || 'Could not connect to the backend. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -253,7 +258,11 @@ const RouteComparisonScreen = () => {
             <div className="w-16 h-16 rounded-full bg-[#1b3a2a]/10 flex items-center justify-center">
               <Loader2 size={28} className="text-[#1b3a2a] animate-spin" />
             </div>
-            <p className="text-gray-500 font-medium">Generating comparison across all routes…</p>
+            <p className="text-gray-500 font-medium">
+              {connState === 'retrying' || connState === 'waking'
+                ? getConnectionStateMessage(connState)
+                : 'Generating comparison across all routes…'}
+            </p>
           </motion.div>
         )}
 

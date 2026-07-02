@@ -1,10 +1,20 @@
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+// VITE_API_URL must be set in Vercel Dashboard (or .env.production for local builds)
+const BASE_URL = import.meta.env.VITE_API_URL || 'https://pravaas.onrender.com/api';
 
-const DEFAULT_TIMEOUT = 15000;
-const MAX_RETRIES = 3;
-const RETRY_DELAY = 2000;
+// Warn developers when env var is missing
+if (!import.meta.env.VITE_API_URL) {
+  console.warn(
+    '[Pravaas] VITE_API_URL is not set. Using default:',
+    BASE_URL,
+    '\n  Set VITE_API_URL in Vercel Dashboard → Project Settings → Environment Variables'
+  );
+}
 
-type ConnectionState = 'idle' | 'connecting' | 'connected' | 'retrying' | 'offline';
+const DEFAULT_TIMEOUT = 30000;
+const MAX_RETRIES = 5;
+const RETRY_DELAY = 3000;
+
+export type ConnectionState = 'idle' | 'connecting' | 'connected' | 'retrying' | 'offline' | 'waking';
 
 let connectionState: ConnectionState = 'idle';
 let stateListeners: ((state: ConnectionState) => void)[] = [];
@@ -25,6 +35,17 @@ function setConnectionState(state: ConnectionState) {
   stateListeners.forEach((l) => l(state));
 }
 
+export function getConnectionStateMessage(state: ConnectionState): string {
+  switch (state) {
+    case 'connecting': return 'Starting secure connection...';
+    case 'waking': return 'Waking server...';
+    case 'retrying': return 'Retrying...';
+    case 'connected': return 'Connected';
+    case 'offline': return 'Backend unavailable';
+    default: return '';
+  }
+}
+
 async function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutMs = DEFAULT_TIMEOUT): Promise<Response> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -42,13 +63,14 @@ async function fetchWithRetry(url: string, options: RequestInit = {}, retries = 
 
   for (let attempt = 1; attempt <= retries; attempt++) {
     if (attempt === 1) {
-      setConnectionState('connecting');
+      setConnectionState('waking');
     } else {
       setConnectionState('retrying');
     }
 
     try {
-      const response = await fetchWithTimeout(url, options);
+      const timeoutMs = attempt === 1 ? 60000 : DEFAULT_TIMEOUT;
+      const response = await fetchWithTimeout(url, options, timeoutMs);
 
       if (response.ok) {
         setConnectionState('connected');
@@ -70,7 +92,8 @@ async function fetchWithRetry(url: string, options: RequestInit = {}, retries = 
     }
 
     if (attempt < retries) {
-      await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY * attempt));
+      const delay = RETRY_DELAY * Math.pow(2, attempt - 1);
+      await new Promise((resolve) => setTimeout(resolve, delay));
     }
   }
 
@@ -78,14 +101,42 @@ async function fetchWithRetry(url: string, options: RequestInit = {}, retries = 
   throw lastError;
 }
 
-export async function checkBackendHealth(): Promise<boolean> {
+async function wakeBackend(): Promise<boolean> {
   try {
-    const healthUrl = BASE_URL.replace(/\/api\/?$/, '/health');
-    const response = await fetchWithTimeout(healthUrl, { method: 'GET' }, 8000);
+    setConnectionState('waking');
+    const rootUrl = BASE_URL.replace(/\/api\/?$/, '/');
+    const response = await fetchWithTimeout(rootUrl, { method: 'GET' }, 60000);
     return response.ok;
   } catch {
     return false;
   }
+}
+
+export async function checkBackendHealth(): Promise<boolean> {
+  const healthUrl = BASE_URL.replace(/\/api\/?$/, '/health');
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      if (attempt === 1) {
+        setConnectionState('waking');
+      } else {
+        setConnectionState('retrying');
+      }
+      const response = await fetchWithTimeout(healthUrl, { method: 'GET' }, 30000);
+      if (response.ok) {
+        setConnectionState('connected');
+        return true;
+      }
+      if (attempt < 3) {
+        await new Promise((resolve) => setTimeout(resolve, 5000 * attempt));
+      }
+    } catch {
+      if (attempt < 3) {
+        await new Promise((resolve) => setTimeout(resolve, 5000 * attempt));
+      }
+    }
+  }
+  setConnectionState('offline');
+  return false;
 }
 
 export async function apiGet<T>(path: string): Promise<T> {
