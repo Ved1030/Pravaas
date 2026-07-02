@@ -1,3 +1,5 @@
+import type { NotificationsResponse } from './types';
+
 const BASE_URL = 'http://localhost:5000/api';
 
 export interface RouteResource {
@@ -197,5 +199,13 @@ export async function getVoiceInstructions(route: BackendRoute): Promise<{ instr
     body: JSON.stringify({ route }),
   });
   if (!res.ok) throw new Error(`getVoiceInstructions failed: ${res.status}`);
+  return res.json();
+}
+
+export async function getNotifications(lat: number, lng: number, radius?: number): Promise<NotificationsResponse> {
+  const params = new URLSearchParams({ lat: String(lat), lng: String(lng) });
+  if (radius) params.append('radius', String(radius));
+  const res = await fetch(`${BASE_URL}/notifications?${params.toString()}`);
+  if (!res.ok) throw new Error(`getNotifications failed: ${res.status}`);
   return res.json();
 }

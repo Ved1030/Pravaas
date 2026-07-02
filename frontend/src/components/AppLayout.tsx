@@ -22,6 +22,7 @@ import DisruptionsScreen from '@/components/screens/DisruptionsScreen';
 import HistoryScreen from '@/components/screens/HistoryScreen';
 import ProfileScreen from '@/components/screens/ProfileScreen';
 import RouteComparisonScreen from '@/components/screens/RouteComparisonScreen';
+import NotificationsScreen from '@/components/screens/NotificationsScreen';
 
 const navItems = [
   { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard' },
@@ -29,6 +30,7 @@ const navItems = [
   { id: 'map', icon: Map, label: 'Live Map' },
   { id: 'comparison', icon: GitCompare, label: 'Compare' },
   { id: 'alerts', icon: AlertTriangle, label: 'Disruptions' },
+  { id: 'notifications', icon: Bell, label: 'Notifications' },
   { id: 'history', icon: History, label: 'History' },
   { id: 'profile', icon: User, label: 'Profile' },
 ];
@@ -50,6 +52,7 @@ const AppLayout = () => {
       case 'map': return <LiveMapScreen />;
       case 'comparison': return <RouteComparisonScreen />;
       case 'alerts': return <DisruptionsScreen />;
+      case 'notifications': return <NotificationsScreen />;
       case 'history': return <HistoryScreen />;
       case 'profile': return <ProfileScreen />;
       default: return <DashboardScreen onNavigate={setActiveScreen} />;

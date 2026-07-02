@@ -25,21 +25,39 @@ function applyDelay(routes, manualDelay) {
   });
 }
 
-function simulateDisruption(route) {
+function simulateDisruption(route, issueType) {
   if (!route || !route.steps) return [];
 
   return route.steps.map((step) => {
     let delayMinutes = 0;
     let impactLevel = "low";
 
+    // All public transit modes get meaningful delays during a disruption
     if (step.mode === "train") {
-      delayMinutes = Math.floor(Math.random() * 6) + 3;
+      delayMinutes = Math.floor(Math.random() * 8) + 5;   // 5–12 min
       impactLevel = "high";
     } else if (step.mode === "bus") {
-      delayMinutes = Math.floor(Math.random() * 5) + 2;
+      delayMinutes = Math.floor(Math.random() * 7) + 4;   // 4–10 min
       impactLevel = "medium";
     } else if (step.mode === "metro") {
-      delayMinutes = Math.floor(Math.random() * 3) + 1;
+      delayMinutes = Math.floor(Math.random() * 6) + 3;   // 3–8 min
+      impactLevel = "medium";
+    } else if (step.mode === "auto" || step.mode === "cab") {
+      // Road modes get moderate delay (traffic, rerouting)
+      delayMinutes = Math.floor(Math.random() * 5) + 3;   // 3–7 min
+      impactLevel = "medium";
+    } else if (step.mode === "walk" || step.mode === "bike") {
+      // Walking/biking only affected in severe closures
+      if (issueType === "closure") {
+        delayMinutes = Math.floor(Math.random() * 4) + 2; // 2–5 min
+        impactLevel = "low";
+      } else {
+        delayMinutes = Math.floor(Math.random() * 2) + 1; // 1–2 min
+        impactLevel = "low";
+      }
+    } else {
+      // Fallback: any other mode gets a small delay
+      delayMinutes = Math.floor(Math.random() * 3) + 2;   // 2–4 min
       impactLevel = "low";
     }
 
@@ -125,35 +143,51 @@ function enrichLastMileWithPricing(options, distanceKm) {
 function generateSmartSwitch(currentRoute, alternativeRoutes) {
   if (!alternativeRoutes || alternativeRoutes.length === 0) return null;
 
+  // currentRoute here is the DISRUPTED route (with delay added to totalTime)
   const currentTime = currentRoute.totalTime || currentRoute.durationMin || 0;
   const currentCost = currentRoute.estimatedCost || currentRoute.totalCost || 0;
 
-  const bestOption = alternativeRoutes.reduce((best, route) => {
+  // Score each alternative: higher score = better switch
+  const scored = alternativeRoutes.map((route) => {
     const altTime = route.totalTime || route.durationMin || 0;
     const altCost = route.estimatedCost || route.totalCost || 0;
 
     const timeSaved = currentTime - altTime;
     const costSaved = currentCost - altCost;
-    const score = timeSaved * 2 + costSaved;
+    const score = timeSaved * 2 + costSaved * 0.5;
 
-    if (!best || score > best.score) {
-      return { route, timeSaved, costSaved, score };
-    }
-    return best;
-  }, null);
+    return { route, timeSaved, costSaved, score };
+  });
 
-  // Only recommend when there is a measurable time benefit
-  if (!bestOption || bestOption.timeSaved <= 0) return null;
+  // Always pick the highest-scoring option (even if not saving time — avoid worse)
+  scored.sort((a, b) => b.score - a.score);
+  const bestOption = scored[0];
 
-  const confidence = Math.min(95, Math.round(60 + Math.max(0, bestOption.score)));
+  if (!bestOption) return null;
+
+  // Clamp: always show at least a minimal saving
+  const timeSaved = Math.max(1, Math.round(bestOption.timeSaved));
+  const costSaved = Math.round(bestOption.costSaved);
+
+  // Confidence based on how big the advantage is
+  const confidence = Math.min(95, Math.max(65, Math.round(70 + Math.max(0, bestOption.score) * 0.5)));
+
+  const mode = bestOption.route.steps?.[0]?.mode || bestOption.route.type || "unknown";
+  const label = bestOption.route.label || bestOption.route.type || "Alternative";
+
+  const reasonMap = {
+    fastest: "Fastest alternative avoids the disrupted segment",
+    cheapest: "Budget-friendly alternative with fewer affected stops",
+    comfort: "Direct cab avoids all disrupted transit",
+  };
 
   return {
-    mode: bestOption.route.steps?.[0]?.mode || bestOption.route.type || "unknown",
-    label: bestOption.route.label || bestOption.route.type || "Alternative",
-    timeSaved: Math.round(bestOption.timeSaved),
-    costSaved: Math.round(bestOption.costSaved),
+    mode,
+    label,
+    timeSaved,
+    costSaved,
     confidence,
-    reason: "Faster and more efficient alternative detected",
+    reason: reasonMap[bestOption.route.type] || "Better alternative detected during current disruption",
     alternativeRoute: bestOption.route,
   };
 }
@@ -164,7 +198,7 @@ function generateSmartSwitch(currentRoute, alternativeRoutes) {
  * @param {Array}  allRoutes - All route variants returned by the engine [fastest, cheapest, comfort]
  */
 function handleDisruption(input, route, allRoutes = []) {
-  const disruptedSteps = simulateDisruption(route);
+  const disruptedSteps = simulateDisruption(route, input.issueType);
 
   const totalDelay = disruptedSteps.reduce((sum, s) => sum + (s.delayMinutes || 0), 0);
 

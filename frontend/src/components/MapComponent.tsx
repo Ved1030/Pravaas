@@ -61,6 +61,26 @@ const userLocationIcon = L.divIcon({
   iconAnchor: [10, 10],
 });
 
+function createAlertIcon(severity: 'high' | 'medium' | 'low', icon: string): L.DivIcon {
+  const colorMap = { high: '#ef4444', medium: '#f59e0b', low: '#10b981' };
+  const bgColor = colorMap[severity];
+  return L.divIcon({
+    className: 'alert-marker',
+    html: `
+      <div style="position:relative;width:36px;height:36px;">
+        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:32px;height:32px;background:${bgColor};border:2px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.25);display:flex;align-items:center;justify-content:center;font-size:16px;z-index:2;">
+          ${icon}
+        </div>
+        ${severity === 'high' ? `<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:44px;height:44px;background:${bgColor}33;border-radius:50%;animation:alertPulse 2s ease-in-out infinite;z-index:1;"></div>` : ''}
+      </div>
+      <style>@keyframes alertPulse{0%,100%{transform:translate(-50%,-50%) scale(1);opacity:0.5}50%{transform:translate(-50%,-50%) scale(1.3);opacity:0.15}}</style>
+    `,
+    iconSize: [36, 36],
+    iconAnchor: [18, 18],
+    popupAnchor: [0, -18],
+  });
+}
+
 export interface LatLng { lat: number; lng: number; }
 
 export interface MapRoute {
@@ -83,6 +103,19 @@ export interface UserLocation {
   accuracy?: number;
 }
 
+export interface AlertMarker {
+  id: string | number;
+  type: string;
+  title: string;
+  message: string;
+  location: string;
+  severity: 'high' | 'medium' | 'low';
+  coordinates: { lat: number; lng: number };
+  icon: string;
+  distance?: number;
+  confidence?: number;
+}
+
 interface MapComponentProps {
   routes: MapRoute[];
   selectedRouteId?: string;
@@ -94,6 +127,7 @@ interface MapComponentProps {
   segmentGeometries?: [number, number][][];
   currentSegmentIndex?: number;
   onUserLocationChange?: (loc: UserLocation) => void;
+  alertMarkers?: AlertMarker[];
 }
 
 /**
@@ -190,6 +224,7 @@ export default function MapComponent({
   segmentGeometries,
   currentSegmentIndex = 0,
   onUserLocationChange,
+  alertMarkers = [],
 }: MapComponentProps) {
   const allPositions = (routes || []).flatMap((r) => r?.positions || []);
   const selectedRoute = (routes || []).find((r) => r.id === selectedRouteId);
@@ -325,6 +360,29 @@ export default function MapComponent({
             </Popup>
           </Marker>
         )}
+
+        {alertMarkers.map((alert) => {
+          const icon = createAlertIcon(alert.severity, alert.icon);
+          return (
+            <Marker
+              key={`alert-${alert.id}`}
+              position={[alert.coordinates.lat, alert.coordinates.lng]}
+              icon={icon}
+              zIndexOffset={alert.severity === 'high' ? 500 : 100}
+            >
+              <Popup>
+                <div className="text-sm">
+                  <p className="font-bold text-gray-900 mb-1">{alert.icon} {alert.title}</p>
+                  <p className="text-xs text-gray-600 mb-1">{alert.message}</p>
+                  <p className="text-xs text-gray-400">{alert.location}{alert.distance ? ` · ${alert.distance} km` : ''}</p>
+                  {alert.confidence != null && (
+                    <p className="text-xs text-blue-600 font-semibold mt-1">{Math.round(alert.confidence * 100)}% confidence</p>
+                  )}
+                </div>
+              </Popup>
+            </Marker>
+          );
+        })}
       </MapContainer>
 
       {(routes || []).length > 0 && (

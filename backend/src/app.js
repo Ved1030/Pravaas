@@ -6,6 +6,7 @@ const routePlanRoutes = require("./routes/routePlan.routes");
 const disruptionRoutes = require("./routes/disruption.routes");
 const decisionRoutes = require("./routes/decision.routes");
 const voiceRoutes = require("./routes/voice.routes");
+const notificationRoutes = require("./routes/notification.routes");
 
 const app = express();
 
@@ -17,6 +18,7 @@ app.use("/api/route", routePlanRoutes);
 app.use("/api/disruption", disruptionRoutes);
 app.use("/api/decision", decisionRoutes);
 app.use("/api/voice", voiceRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 app.get("/", (req, res) => {
   res.send("SmartCommute API Running 🚀");

@@ -67,3 +67,34 @@ export interface JourneyHistoryItem {
   status: JourneyStatus;
   rerouted?: boolean;
 }
+
+export type NotificationType =
+  | "accident"
+  | "metro_delay"
+  | "crowd"
+  | "traffic"
+  | "signal_failure"
+  | "road_closure"
+  | "prediction";
+
+export type NotificationSeverity = "high" | "medium" | "low";
+
+export interface NotificationAlert {
+  id: string | number;
+  type: NotificationType;
+  title: string;
+  location: string;
+  distance: number;
+  severity: NotificationSeverity;
+  message: string;
+  coordinates: { lat: number; lng: number };
+  timestamp: string;
+  confidence?: number;
+}
+
+export interface NotificationsResponse {
+  alerts: NotificationAlert[];
+  userLocation: { lat: number; lng: number };
+  radius: number;
+  total: number;
+}
