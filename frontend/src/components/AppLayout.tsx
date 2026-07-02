@@ -66,10 +66,10 @@ const AppLayout = () => {
         {/* Logo */}
         <div className="p-7 flex items-center gap-3">
           <div className="w-11 h-11 rounded-xl overflow-hidden bg-white shrink-0 shadow-sm border border-gray-100 flex items-center justify-center transition-transform hover:scale-105">
-            <img src="/logo3.png" alt="FlowCity Logo" className="w-full h-full object-contain p-1" />
+            <img src="/pravaas-logo.png" alt="PRAVAAS Logo" className="w-full h-full object-contain p-1" />
           </div>
           <h1 className="text-2xl font-black tracking-tight bg-gradient-to-r from-[#1b3a2a] to-[#2c5f45] bg-clip-text text-transparent">
-            FlowCity
+            PRAVAAS
           </h1>
         </div>
 

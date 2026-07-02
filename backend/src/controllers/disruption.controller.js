@@ -1,5 +1,6 @@
 const disruptionService = require("../services/disruption.service");
 const { simulateDelay, generateRoutes } = require("../services/routeEngine");
+const logger = require("../utils/logger");
 
 exports.simulateDelay = (req, res) => {
   const { delay, mode } = req.body;
@@ -64,7 +65,7 @@ exports.handleDisruption = async (req, res) => {
       ...result,
     });
   } catch (error) {
-    console.error("Disruption handling failed:", error.message);
+    logger.error("Disruption handling failed:", error.message);
     res.status(500).json({
       error: "Failed to process disruption",
       message: error.message,

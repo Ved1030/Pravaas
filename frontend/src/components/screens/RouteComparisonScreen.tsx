@@ -144,7 +144,7 @@ const RouteComparisonScreen = () => {
       setSelectedRoute(recId || backendRoutes[0]?.id || null);
       setRecommended(data?.recommended || null);
     } catch {
-      setError('Could not connect to the backend. Make sure the server is running.');
+      setError('Could not connect to the backend. The server may be starting up.');
     } finally {
       setLoading(false);
     }

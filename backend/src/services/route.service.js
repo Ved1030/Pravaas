@@ -1,5 +1,6 @@
 const OSRM_BASE = "http://router.project-osrm.org/route/v1";
 const NOMINATIM_BASE = "https://nominatim.openstreetmap.org/search";
+const logger = require("../utils/logger");
 
 const MUMBAI_COORDS = {
   "andheri": { lat: 19.1136, lng: 72.8697 },
@@ -47,13 +48,13 @@ async function geocode(query) {
   const normalizedQuery = query.trim().toLowerCase();
 
   if (MUMBAI_COORDS[normalizedQuery]) {
-    console.log(`Geocode cache hit: "${query}" →`, MUMBAI_COORDS[normalizedQuery]);
+    logger.debug(`Geocode cache hit: "${query}" →`, MUMBAI_COORDS[normalizedQuery]);
     return MUMBAI_COORDS[normalizedQuery];
   }
 
   for (const [key, coords] of Object.entries(MUMBAI_COORDS)) {
     if (normalizedQuery.includes(key)) {
-      console.log(`Geocode partial match: "${query}" → "${key}" →`, coords);
+      logger.debug(`Geocode partial match: "${query}" → "${key}" →`, coords);
       return coords;
     }
   }
@@ -62,7 +63,7 @@ async function geocode(query) {
     const url = `${NOMINATIM_BASE}?format=json&limit=1&q=${encodeURIComponent(query + ", Mumbai, India")}`;
     const res = await fetch(url, {
       headers: {
-        "User-Agent": "flowcity-smart-commute/1.0",
+        "User-Agent": "pravaas-smart-commute/1.0",
         "Accept": "application/json",
       },
     });
@@ -71,7 +72,7 @@ async function geocode(query) {
     try {
       data = JSON.parse(text);
     } catch (err) {
-      console.error("Geocode raw response:", text);
+      logger.error("Geocode raw response:", text);
       throw new Error(`Geocoding failed: ${text.substring(0, 100)}`);
     }
     if (!data.length) throw new Error(`Location not found: "${query}"`);
@@ -80,7 +81,7 @@ async function geocode(query) {
     if (err.message.startsWith("Location not found") || err.message.startsWith("Geocoding failed")) {
       throw err;
     }
-    console.warn("Nominatim failed, using fallback for:", query);
+    logger.warn("Nominatim failed, using fallback for:", query);
     return { lat: 19.0760, lng: 72.8777 };
   }
 }
@@ -128,7 +129,7 @@ async function fetchOSRMSegment(origin, destination, profile = "driving") {
   const { lat: dLat, lng: dLng } = typeof destination === "object" ? destination : await geocode(destination);
 
   const url = `${OSRM_BASE}/${profile}/${oLng},${oLat};${dLng},${dLat}?overview=full&geometries=geojson&steps=true`;
-  console.log("OSRM segment URL:", url);
+  logger.debug("OSRM segment URL:", url);
   const res = await fetch(url);
   const json = await res.json();
 
@@ -139,7 +140,7 @@ async function fetchOSRMSegment(origin, destination, profile = "driving") {
   const route = json.routes[0];
   // Keep as [lng, lat] — frontend normalizeCoordinates() will swap to [lat, lng] for Leaflet
   const geometry = route.geometry.coordinates;
-  console.log("OSRM segment geometry sample (lng,lat):", geometry.slice(0, 3));
+  logger.debug("OSRM segment geometry sample (lng,lat):", geometry.slice(0, 3));
   const distanceKm = route.distance / 1000;
   const durationMin = Math.round(route.duration / 60);
 
@@ -165,7 +166,7 @@ async function fetchOSRMRoutes(origin, destination, profile = "driving") {
   const { lat: dLat, lng: dLng } = typeof destination === "object" ? destination : await geocode(destination);
 
   const url = `${OSRM_BASE}/${profile}/${oLng},${oLat};${dLng},${dLat}?overview=full&geometries=geojson&alternatives=true`;
-  console.log("OSRM URL:", url);
+  logger.debug("OSRM URL:", url);
   const res = await fetch(url);
   const json = await res.json();
 
@@ -173,14 +174,14 @@ async function fetchOSRMRoutes(origin, destination, profile = "driving") {
     throw new Error(`OSRM returned no route for ${profile}: ${json.code}`);
   }
 
-  console.log(`OSRM returned ${json.routes.length} real route(s)`);
+  logger.debug(`OSRM returned ${json.routes.length} real route(s)`);
 
   const typeLabels = ["fastest", "cheapest", "comfort"];
 
   return json.routes.map((route, index) => {
     // Keep as [lng, lat] — frontend normalizeCoordinates() handles the swap for Leaflet
     const geometry = route.geometry.coordinates;
-    console.log(`OSRM route[${index}] geometry sample (lng,lat):`, geometry.slice(0, 3));
+    logger.debug(`OSRM route[${index}] geometry sample (lng,lat):`, geometry.slice(0, 3));
     const distanceKm = route.distance / 1000;
     const durationMin = Math.round(route.duration / 60);
     const type = typeLabels[index] || "comfort";
@@ -237,7 +238,7 @@ async function fetchMultiStopRoute(waypoints, profile = "driving") {
 
   for (let i = 0; i < geocoded.length - 1; i++) {
     const segment = await fetchOSRMSegment(geocoded[i], geocoded[i + 1], profile);
-    console.log(`Segment ${i}: ${waypoints[i]} → ${waypoints[i+1]}, coords: ${segment.geometry.length}, sample:`, segment.geometry.slice(0, 2));
+    logger.debug(`Segment ${i}: ${waypoints[i]} → ${waypoints[i+1]}, coords: ${segment.geometry.length}, sample:`, segment.geometry.slice(0, 2));
 
     segments.push({
       from: waypoints[i],
@@ -262,7 +263,7 @@ async function fetchMultiStopRoute(waypoints, profile = "driving") {
     allSteps.push(...segment.steps);
   }
 
-  console.log("Multi-stop merged geometry total coords:", mergedGeometry.length, "sample:", mergedGeometry.slice(0, 3));
+  logger.debug("Multi-stop merged geometry total coords:", mergedGeometry.length, "sample:", mergedGeometry.slice(0, 3));
 
   return {
     waypoints: geocoded,
@@ -274,7 +275,16 @@ async function fetchMultiStopRoute(waypoints, profile = "driving") {
   };
 }
 
+function getAllRoutes() {
+  return [
+    { id: "fastest", type: "fastest", label: "Fastest", from: "Andheri", to: "BKC", distanceKm: 12.5, durationMin: 28, estimatedCost: 75, transfers: 1, trafficLevel: "medium", reliability: 88 },
+    { id: "cheapest", type: "cheapest", label: "Cheapest", from: "Andheri", to: "BKC", distanceKm: 14.2, durationMin: 45, estimatedCost: 35, transfers: 2, trafficLevel: "low", reliability: 76 },
+    { id: "comfort", type: "comfort", label: "Comfort", from: "Andheri", to: "BKC", distanceKm: 11.8, durationMin: 22, estimatedCost: 190, transfers: 0, trafficLevel: "medium", reliability: 82 },
+  ];
+}
+
 exports.geocode = geocode;
 exports.fetchOSRMRoutes = fetchOSRMRoutes;
 exports.fetchMultiStopRoute = fetchMultiStopRoute;
 exports.generateResources = generateResources;
+exports.getAllRoutes = getAllRoutes;

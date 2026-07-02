@@ -23,7 +23,7 @@
 //             <div className="w-9 h-9 rounded-xl bg-[#1b3a2a] flex items-center justify-center">
 //               <RefreshCw size={18} strokeWidth={2.5} className="text-white" />
 //             </div>
-//             <span className="text-xl font-bold text-gray-900 tracking-tight">FlowCity</span>
+//             <span className="text-xl font-bold text-gray-900 tracking-tight">PRAVAAS</span>
 //           </div>
 
 //           <div className="hidden md:flex items-center gap-8">
@@ -189,7 +189,7 @@
 //           <div className="bg-[#1b3a2a] rounded-[40px] py-20 px-8 text-white relative overflow-hidden">
 //             <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-white/[0.07] to-transparent pointer-events-none" />
 //             <div className="text-center relative z-10 mb-16">
-//               <h2 className="text-3xl md:text-4xl font-bold text-white tracking-tight">How FlowCity Works</h2>
+//               <h2 className="text-3xl md:text-4xl font-bold text-white tracking-tight">How PRAVAAS Works</h2>
 //               <p className="text-lg text-white/60 mt-4 max-w-[500px] mx-auto font-medium">From search to arrival, we've got you covered.</p>
 //             </div>
 
@@ -220,7 +220,7 @@
 //                   <RefreshCw className="text-white" size={24} strokeWidth={2.5} />
 //                 </div>
 //                 <h3 className="font-bold text-xl text-white mb-3">Adapt Instantly</h3>
-//                 <p className="text-sm text-white/60 leading-relaxed font-medium">If disruptions hit, FlowCity reroutes you automatically before you even notice.</p>
+//                 <p className="text-sm text-white/60 leading-relaxed font-medium">If disruptions hit, PRAVAAS reroutes you automatically before you even notice.</p>
 //               </div>
 //             </div>
 //           </div>
@@ -232,7 +232,7 @@
 //             <div className="flex-1">
 //               <h2 className="text-3xl md:text-4xl font-bold text-gray-900 tracking-tight leading-tight mb-6">Built for Mumbai's real chaos</h2>
 //               <p className="text-lg text-gray-500 font-medium mb-10 max-w-lg leading-relaxed">
-//                 We know that perfect routes don't exist in reality. FlowCity is built to anticipate, monitor, and adapt to the unpredictable nature of urban transit.
+//                 We know that perfect routes don't exist in reality. PRAVAAS is built to anticipate, monitor, and adapt to the unpredictable nature of urban transit.
 //               </p>
 //               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
 //                 <div className="bg-white rounded-[24px] p-5 shadow-sm border border-gray-100">
@@ -287,7 +287,7 @@
 //                   {[1,2,3,4,5].map(i => <Star key={i} size={16} fill="currentColor" className="text-amber-400" />)}
 //                 </div>
 //                 <p className="text-sm font-medium text-gray-700 leading-relaxed italic mb-8">
-//                   "FlowCity saved me 20 minutes during the metro strike last week. It rerouted me to a bus before I even knew there was a problem."
+//                   "PRAVAAS saved me 20 minutes during the metro strike last week. It rerouted me to a bus before I even knew there was a problem."
 //                 </p>
 //                 <div className="flex items-center gap-3">
 //                   <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-sm">PM</div>
@@ -358,7 +358,7 @@
 //                <div className="w-8 h-8 rounded-lg bg-[#1b3a2a] flex items-center justify-center">
 //                  <RefreshCw size={16} strokeWidth={2.5} className="text-white" />
 //                </div>
-//                <span className="text-lg font-bold text-gray-900">FlowCity</span>
+//                <span className="text-lg font-bold text-gray-900">PRAVAAS</span>
 //             </div>
 //             <p className="text-sm text-gray-500 font-medium mb-6">Smart urban transit for everyone.</p>
 //             <div className="flex items-center gap-4 text-gray-400">
@@ -395,7 +395,7 @@
 //           </div>
 //         </div>
 //         <div className="max-w-[1200px] mx-auto px-6 mt-12 pt-8 border-t border-gray-100 flex items-center justify-between">
-//             <p className="text-xs text-gray-400 font-medium">© 2026 FlowCity · Made in Mumbai 🇮🇳</p>
+//             <p className="text-xs text-gray-400 font-medium">© 2026 PRAVAAS · Made in Mumbai 🇮🇳</p>
 //         </div>
 //       </footer>
 //     </div>

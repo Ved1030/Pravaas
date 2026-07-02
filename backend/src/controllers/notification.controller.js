@@ -1,4 +1,5 @@
 const notificationService = require("../services/notification.service");
+const logger = require("../utils/logger");
 
 exports.getNotifications = (req, res) => {
   try {
@@ -32,7 +33,7 @@ exports.getNotifications = (req, res) => {
       total: filtered.length,
     });
   } catch (error) {
-    console.error("Notification fetch failed:", error.message);
+    logger.error("Notification fetch failed:", error.message);
     res.status(500).json({
       error: "Failed to fetch notifications",
       message: error.message,

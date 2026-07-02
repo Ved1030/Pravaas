@@ -88,13 +88,13 @@ export default function Landing() {
           <Link to="/" className="flex items-center gap-2.5">
             <div className="w-15 h-15 flex items-center justify-center rounded-xl bg-white shadow-sm border border-gray-100">
               <img
-                src="/logo3.png"
-                alt="FlowCity Logo"
+                src="/pravaas-logo.png"
+                alt="PRAVAAS Logo"
                 className="w-10 h-10 object-contain rounded-2xl"
               />
             </div>
             <span className="text-xl font-bold text-gray-900 tracking-tight">
-              FlowCity
+              PRAVAAS
             </span>
           </Link>
 
@@ -346,7 +346,7 @@ export default function Landing() {
 
               <img
                 src="/image.png"
-                alt="FlowCity Dashboard — Real-time transit planning with route confidence scores"
+                alt="PRAVAAS Dashboard — Real-time transit planning with route confidence scores"
                 width={1400}
                 height={900}
                 loading="eager"
@@ -528,7 +528,7 @@ export default function Landing() {
           <div className="bg-[#1b3a2a] rounded-[40px] py-20 px-8 text-white relative overflow-hidden">
             <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-white/[0.07] to-transparent pointer-events-none" />
             <div className="text-center relative z-10 mb-16">
-              <h2 className="text-3xl md:text-4xl font-bold text-white tracking-tight">How FlowCity Works</h2>
+              <h2 className="text-3xl md:text-4xl font-bold text-white tracking-tight">How PRAVAAS Works</h2>
               <p className="text-lg text-white/60 mt-4 max-w-[500px] mx-auto font-medium">From search to arrival, we've got you covered.</p>
             </div>
 
@@ -559,7 +559,7 @@ export default function Landing() {
                   <RefreshCw className="text-white" size={24} strokeWidth={2.5} />
                 </div>
                 <h3 className="font-bold text-xl text-white mb-3">Adapt Instantly</h3>
-                <p className="text-sm text-white/60 leading-relaxed font-medium">If disruptions hit, FlowCity reroutes you automatically before you even notice.</p>
+                <p className="text-sm text-white/60 leading-relaxed font-medium">If disruptions hit, PRAVAAS reroutes you automatically before you even notice.</p>
               </div>
             </div>
           </div>
@@ -585,7 +585,7 @@ export default function Landing() {
                     border: `1px solid ${LIME}30`,
                   }}
                 >
-                  About FlowCity
+                  About PRAVAAS
                 </span>
               </motion.div>
               <motion.h2
@@ -600,7 +600,7 @@ export default function Landing() {
                 variants={fadeUp}
                 className="text-lg text-gray-500 font-medium mb-6 max-w-lg leading-relaxed"
               >
-                We know that perfect routes don't exist in reality. FlowCity is
+                We know that perfect routes don't exist in reality. PRAVAAS is
                 built to anticipate, monitor, and adapt to the unpredictable
                 nature of urban transit.
               </motion.p>
@@ -609,7 +609,7 @@ export default function Landing() {
                 className="text-sm text-gray-400 font-medium mb-10 max-w-lg leading-relaxed"
               >
                 Born from the frustration of missed connections, surprise delays,
-                and cancelled buses, FlowCity uses a proprietary disruption
+                and cancelled buses, PRAVAAS uses a proprietary disruption
                 detection engine to give commuters something no other app offers:
                 a route that fights for you.
               </motion.p>
@@ -850,7 +850,7 @@ export default function Landing() {
               {[
                 {
                   quote:
-                    "FlowCity saved me 20 minutes during the metro strike last week. It rerouted me to a bus before I even knew there was a problem.",
+                    "PRAVAAS saved me 20 minutes during the metro strike last week. It rerouted me to a bus before I even knew there was a problem.",
                   name: "Priya M.",
                   initials: "PM",
                   bg: WARM_GREEN_BG,
@@ -994,12 +994,12 @@ export default function Landing() {
                 <div className="flex items-center gap-2.5 mb-5">
                   <div className="w-15 h-15 flex items-center justify-center rounded-xl bg-white shadow-sm border border-gray-100">
                     <img
-                      src="/logo3.png"
-                      alt="FlowCity Logo"
+                       src="/pravaas-logo.png"
+                      alt="PRAVAAS Logo"
                       className="w-10 h-10 object-contain rounded-2xl"
                     />
                   </div>
-                  <span className="text-xl font-bold text-white tracking-tight">FlowCity</span>
+                  <span className="text-xl font-bold text-white tracking-tight">PRAVAAS</span>
                 </div>
 
                 <p className="text-sm font-medium mb-6 max-w-[280px] leading-relaxed" style={{ color: "rgba(255,255,255,0.45)" }}>
@@ -1033,7 +1033,7 @@ export default function Landing() {
             {/* Divider */}
             <div className="mt-12 pt-8" style={{ borderTop: `1px solid rgba(255,255,255,0.08)` }}>
               <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-                <p className="text-xs font-medium" style={{ color: "rgba(255,255,255,0.3)" }}>© 2026 FlowCity · Made with ❤️ in Mumbai 🇮🇳</p>
+                <p className="text-xs font-medium" style={{ color: "rgba(255,255,255,0.3)" }}>© 2026 PRAVAAS · Made with ❤️ in Mumbai 🇮🇳</p>
 
                 {/* Status + Version */}
                 <div className="flex items-center gap-4">

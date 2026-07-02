@@ -560,7 +560,7 @@ const LiveMapScreen = () => {
           setMapStops(newStops);
         }
       } else {
-        setError('Could not connect to the backend. Make sure the server is running on port 5000.');
+        setError('Could not connect to the backend. The server may be starting up.');
       }
 
       if (geoResult.status === 'rejected') {

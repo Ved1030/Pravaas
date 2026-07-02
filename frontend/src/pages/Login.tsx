@@ -56,12 +56,12 @@ const handleSubmit = async (e: React.FormEvent) => {
         <div className="relative z-10 flex items-center gap-3">
           <div className="w-15 h-15 flex items-center justify-center rounded-xl bg-white shadow-sm border border-gray-100">
             <img
-              src="/logo3.png"
-              alt="FlowCity Logo"
+              src="/pravaas-logo.png"
+              alt="PRAVAAS Logo"
               className="w-10 h-10 object-contain rounded-2xl"
             />
           </div>
-          <span className="text-3xl font-bold text-white tracking-tight">FlowCity</span>
+          <span className="text-3xl font-bold text-white tracking-tight">PRAVAAS</span>
         </div>
 
         {/* CENTERED IMAGE (same as signup) */}
@@ -96,7 +96,7 @@ const handleSubmit = async (e: React.FormEvent) => {
         <div className="w-full max-w-[480px] px-6 py-12 lg:py-16 mx-auto">
           <div className="mb-8 text-center lg:text-left">
             <h1 className="text-4xl font-bold text-gray-900 tracking-tight">Welcome back</h1>
-            <p className="text-base text-gray-500 font-medium mt-2">Log in to your FlowCity account</p>
+            <p className="text-base text-gray-500 font-medium mt-2">Log in to your PRAVAAS account</p>
           </div>
 
           <motion.form

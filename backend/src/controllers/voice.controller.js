@@ -1,7 +1,8 @@
 const { generateVoiceInstructionsForRoute } = require("../services/routeEngine");
+const logger = require("../utils/logger");
 
 exports.getVoiceInstructions = async (req, res) => {
-  console.log("POST /api/voice/instructions hit");
+  logger.debug("POST /api/voice/instructions hit");
 
   const { route } = req.body;
 
@@ -13,7 +14,7 @@ exports.getVoiceInstructions = async (req, res) => {
     const instructions = await generateVoiceInstructionsForRoute(route);
     res.json({ instructions });
   } catch (err) {
-    console.error("Voice instruction error:", err);
+    logger.error("Voice instruction error:", err.message);
     res.status(500).json({ error: "Failed to generate voice instructions.", details: err.message });
   }
 };

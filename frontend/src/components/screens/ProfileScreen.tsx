@@ -574,7 +574,7 @@
 
 //             {/* ── Footer ── */}
 //             <motion.div variants={fadeUp} className="text-center pt-2 pb-2">
-//               <p className="text-[11px] text-gray-400 font-medium">FlowCity v2.0 · Built with ❤️ in Mumbai</p>
+//               <p className="text-[11px] text-gray-400 font-medium">PRAVAAS v2.0 · Built with ❤️ in Mumbai</p>
 //             </motion.div>
 //           </div>
 //         </div>
@@ -1243,7 +1243,7 @@ const ProfileScreen = () => {
             </motion.div>
 
             <motion.div variants={fadeUp} className="text-center pt-2 pb-2">
-              <p className="text-[11px] text-gray-400 font-medium">FlowCity v2.0 · Built with ❤️ in Mumbai</p>
+              <p className="text-[11px] text-gray-400 font-medium">PRAVAAS v2.0 · Built with ❤️ in Mumbai</p>
             </motion.div>
           </div>
         </div>

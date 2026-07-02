@@ -12,7 +12,7 @@ import {
   Filter,
   X,
 } from 'lucide-react';
-import { getNotifications } from '@/lib/api';
+import { getNotifications, checkBackendHealth, onConnectionStateChange } from '@/lib/api';
 import type { NotificationAlert, NotificationSeverity, NotificationType } from '@/lib/types';
 import MapComponent, { type MapRoute, type AlertMarker, normalizeCoordinates } from '@/components/MapComponent';
 
@@ -110,15 +110,52 @@ const NotificationsScreen = () => {
   const [showMap, setShowMap] = useState(false);
   const [mapRoutes, setMapRoutes] = useState<MapRoute[]>([]);
   const [alertMarkers, setAlertMarkers] = useState<AlertMarker[]>([]);
+  const [connectionState, setConnectionState] = useState<string>('idle');
   const hasPushedRef = useRef<Set<string>>(new Set());
+  const retryCountRef = useRef(0);
 
-  const fetchAlerts = useCallback((lat: number, lng: number) => {
+  useEffect(() => {
+    return onConnectionStateChange(setConnectionState);
+  }, []);
+
+  const getErrorMessage = (err: any): string => {
+    if (err?.name === 'AbortError' || err?.message?.includes('timeout')) {
+      return 'Server is starting up. Retrying...';
+    }
+    if (err?.message?.includes('Failed to fetch') || err?.message?.includes('NetworkError')) {
+      return 'Network unavailable. Check your connection.';
+    }
+    if (err?.message?.includes('API error: 5')) {
+      return 'Server encountered an error. Retrying...';
+    }
+    return 'Could not connect to notification service. Please try again.';
+  };
+
+  const fetchAlerts = useCallback(async (lat: number, lng: number) => {
     setLoading(true);
     setError(null);
-    getNotifications(lat, lng, 5)
-      .then((resp) => {
+    retryCountRef.current = 0;
+
+    const maxRetries = 3;
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        if (attempt > 1) {
+          setConnectionState('retrying');
+          setError(`Retrying... (attempt ${attempt}/${maxRetries})`);
+          await new Promise((resolve) => setTimeout(resolve, 2000 * attempt));
+        }
+
+        const isHealthy = await checkBackendHealth();
+        if (!isHealthy && attempt < maxRetries) {
+          setConnectionState('retrying');
+          setError('Server is waking up...');
+          continue;
+        }
+
+        const resp = await getNotifications(lat, lng, 5);
         setAlerts(resp.alerts);
         setLoading(false);
+        setError(null);
 
         if (pushEnabled) {
           resp.alerts.forEach((alert) => {
@@ -128,12 +165,15 @@ const NotificationsScreen = () => {
             }
           });
         }
-      })
-      .catch((err) => {
-        console.error('Failed to fetch notifications:', err);
-        setError('Could not connect to notification service. Make sure the backend is running.');
-        setLoading(false);
-      });
+        return;
+      } catch (err: any) {
+        if (attempt === maxRetries) {
+          console.error('Failed to fetch notifications:', err);
+          setError(getErrorMessage(err));
+          setLoading(false);
+        }
+      }
+    }
   }, [pushEnabled]);
 
   const handleGetLocation = () => {
@@ -502,7 +542,22 @@ const NotificationsScreen = () => {
           {error && (
             <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="p-4 bg-red-50 border border-red-200 rounded-2xl flex items-start gap-2">
               <AlertCircle size={14} className="text-red-500 flex-shrink-0 mt-0.5" />
-              <p className="text-xs font-medium text-red-600">{error}</p>
+              <div className="flex-1">
+                <p className="text-xs font-medium text-red-600">{error}</p>
+                {connectionState === 'retrying' && (
+                  <div className="flex items-center gap-2 mt-2">
+                    <Loader2 size={12} className="animate-spin text-amber-500" />
+                    <span className="text-[10px] font-semibold text-amber-600 uppercase tracking-wider">Retrying...</span>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+
+          {connectionState === 'connected' && !loading && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 border border-emerald-200 rounded-xl">
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Connected</span>
             </motion.div>
           )}
         </div>

@@ -1,6 +1,7 @@
 import type { NotificationsResponse } from './types';
+import { apiGet, apiPost, checkBackendHealth, onConnectionStateChange, getConnectionState } from '@/services/api';
 
-const BASE_URL = 'http://localhost:5000/api';
+export { checkBackendHealth, onConnectionStateChange, getConnectionState };
 
 export interface RouteResource {
   type: 'walk' | 'metro' | 'bus' | 'train' | 'cab' | 'auto';
@@ -35,7 +36,6 @@ export interface BackendRoute {
   distanceKm: number;
   resources: RouteResource[];
   steps: RouteStep[];
-  // Multi-stop fields
   segmentGeometries?: [number, number][][];
   stopCoordinates?: { from: { lat: number; lng: number }; to: { lat: number; lng: number } }[];
 }
@@ -65,34 +65,15 @@ export interface RoutePlanResponse {
 }
 
 export async function planRoute(source: string, destination: string, preferences?: { speed: number; cost: number; comfort: number }, stops?: string[], sourceCoords?: { lat: number; lng: number }): Promise<RoutePlanResponse> {
-  const res = await fetch(`${BASE_URL}/route/plan`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ source, destination, preferences, stops, sourceCoords }),
-  });
-  if (!res.ok) throw new Error(`planRoute failed: ${res.status}`);
-  const data = await res.json();
-  return data as RoutePlanResponse;
+  return apiPost('/route/plan', { source, destination, preferences, stops, sourceCoords });
 }
 
 export async function simulateDisruption(delay: number): Promise<any> {
-  const res = await fetch(`${BASE_URL}/disruption/simulate`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ delay }),
-  });
-  if (!res.ok) throw new Error(`simulateDisruption failed: ${res.status}`);
-  return res.json();
+  return apiPost('/disruption/simulate', { delay });
 }
 
 export async function simulateDisruptionByMode(mode: 'train' | 'bus' | 'metro'): Promise<any> {
-  const res = await fetch(`${BASE_URL}/disruption/simulate`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ mode }),
-  });
-  if (!res.ok) throw new Error(`simulateDisruptionByMode failed: ${res.status}`);
-  return res.json();
+  return apiPost('/disruption/simulate', { mode });
 }
 
 export interface DisruptionStep {
@@ -168,19 +149,11 @@ export async function handleDisruption(input: {
   issueType?: string;
   preferences?: { speed: number; cost: number; comfort: number };
 }): Promise<DisruptionResponse> {
-  const res = await fetch(`${BASE_URL}/disruption`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(input),
-  });
-  if (!res.ok) throw new Error(`handleDisruption failed: ${res.status}`);
-  return res.json();
+  return apiPost('/disruption', input);
 }
 
 export async function getAllRoutes(): Promise<any[]> {
-  const res = await fetch(`${BASE_URL}/routes`);
-  if (!res.ok) throw new Error(`getAllRoutes failed: ${res.status}`);
-  return res.json();
+  return apiGet('/routes');
 }
 
 export interface VoiceInstruction {
@@ -193,19 +166,11 @@ export interface VoiceInstruction {
 }
 
 export async function getVoiceInstructions(route: BackendRoute): Promise<{ instructions: VoiceInstruction[] }> {
-  const res = await fetch(`${BASE_URL}/voice/instructions`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ route }),
-  });
-  if (!res.ok) throw new Error(`getVoiceInstructions failed: ${res.status}`);
-  return res.json();
+  return apiPost('/voice/instructions', { route });
 }
 
 export async function getNotifications(lat: number, lng: number, radius?: number): Promise<NotificationsResponse> {
   const params = new URLSearchParams({ lat: String(lat), lng: String(lng) });
   if (radius) params.append('radius', String(radius));
-  const res = await fetch(`${BASE_URL}/notifications?${params.toString()}`);
-  if (!res.ok) throw new Error(`getNotifications failed: ${res.status}`);
-  return res.json();
+  return apiGet(`/notifications?${params.toString()}`);
 }

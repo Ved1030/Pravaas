@@ -1,9 +1,10 @@
 const { generateRoutes } = require("../services/routeEngine");
 const { translateToEnglish } = require("../services/language.service");
+const logger = require("../utils/logger");
 
 exports.planRoute = async (req, res) => {
-  console.log("POST /api/route/plan hit");
-  console.log("Request body:", req.body);
+  logger.debug("POST /api/route/plan hit");
+  logger.debug("Request body:", req.body);
 
   const { source = "", destination = "", stops = [], sourceCoords = null } = req.body;
 
@@ -20,20 +21,20 @@ exports.planRoute = async (req, res) => {
       stops.filter((s) => s && s.trim()).map((s) => translateToEnglish(s))
     );
 
-    console.log("Original source:", source, "→ Translated:", translatedSource);
-    console.log("Original destination:", destination, "→ Translated:", translatedDest);
+    logger.debug("Original source:", source, "→ Translated:", translatedSource);
+    logger.debug("Original destination:", destination, "→ Translated:", translatedDest);
     if (sourceCoords) {
-      console.log("Using source coordinates:", sourceCoords);
+      logger.debug("Using source coordinates:", sourceCoords);
     }
     if (translatedStops.length > 0) {
-      console.log("Translated stops:", translatedStops);
+      logger.debug("Translated stops:", translatedStops);
     }
 
     const result = await generateRoutes(translatedSource, translatedDest, preferences, translatedStops, sourceCoords);
 
     res.json(result);
   } catch (err) {
-    console.error("Route planning error:", err);
+    logger.error("Route planning error:", err.message);
     res.status(500).json({ error: "Failed to plan route. Please try again.", details: err.message });
   }
 };

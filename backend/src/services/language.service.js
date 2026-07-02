@@ -1,9 +1,10 @@
 const SARVAM_API_KEY = process.env.SARVAM_API_KEY;
 const SARVAM_BASE = 'https://api.sarvam.ai';
+const logger = require('../utils/logger');
 
 async function translateToEnglish(text) {
   if (!SARVAM_API_KEY) {
-    console.warn('SARVAM_API_KEY not set, returning original text');
+    logger.warn('SARVAM_API_KEY not set, returning original text');
     return text;
   }
 
@@ -28,21 +29,21 @@ async function translateToEnglish(text) {
 
     if (!res.ok) {
       const errText = await res.text();
-      console.error('Sarvam translate error:', res.status, errText);
+      logger.error('Sarvam translate error:', res.status, errText);
       return text;
     }
 
     const data = await res.json();
     return data.translated_text || text;
   } catch (err) {
-    console.error('Sarvam translate exception:', err.message);
+    logger.error('Sarvam translate exception:', err.message);
     return text;
   }
 }
 
 async function generateVoiceInstruction(step) {
   if (!SARVAM_API_KEY) {
-    console.warn('SARVAM_API_KEY not set, returning plain text instruction');
+    logger.warn('SARVAM_API_KEY not set, returning plain text instruction');
     if (typeof step === 'string') return step;
     return step?.label || step?.instruction || '';
   }
@@ -77,14 +78,14 @@ async function generateVoiceInstruction(step) {
 
     if (!res.ok) {
       const errText = await res.text();
-      console.error('Sarvam TTS error:', res.status, errText);
+      logger.error('Sarvam TTS error:', res.status, errText);
       return instructionText;
     }
 
     const data = await res.json();
     return data.audios?.[0] || instructionText;
   } catch (err) {
-    console.error('Sarvam TTS exception:', err.message);
+    logger.error('Sarvam TTS exception:', err.message);
     return instructionText;
   }
 }

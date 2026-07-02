@@ -1,31 +1,33 @@
-const express = require("express");
-const cors = require("cors");
+require("dotenv").config();
 
-const routeRoutes = require("./routes/route.routes");
-const routePlanRoutes = require("./routes/routePlan.routes");
-const disruptionRoutes = require("./routes/disruption.routes");
-const decisionRoutes = require("./routes/decision.routes");
-const voiceRoutes = require("./routes/voice.routes");
-const notificationRoutes = require("./routes/notification.routes");
+const express = require("express");
+const configureServer = require("./config/server");
+const apiRouter = require("./routes/index");
+const errorHandler = require("./middlewares/errorHandler");
+const notFound = require("./middlewares/notFound");
+const { APP_NAME, APP_VERSION } = require("./config/constants");
 
 const app = express();
 
-app.use(cors());
-app.use(express.json());
-
-app.use("/api/routes", routeRoutes);
-app.use("/api/route", routePlanRoutes);
-app.use("/api/disruption", disruptionRoutes);
-app.use("/api/decision", decisionRoutes);
-app.use("/api/voice", voiceRoutes);
-app.use("/api/notifications", notificationRoutes);
+configureServer(app);
 
 app.get("/", (req, res) => {
-  res.send("SmartCommute API Running 🚀");
+  res.json({
+    success: true,
+    service: APP_NAME,
+    status: "Running",
+    version: APP_VERSION,
+  });
 });
 
-app.get("/api/test", (req, res) => {
-  res.json({ message: "Backend working" });
+app.get("/health", (req, res) => {
+  res.json({ status: "healthy" });
 });
+
+app.use("/api/v1", apiRouter);
+app.use("/api", apiRouter);
+
+app.use(notFound);
+app.use(errorHandler);
 
 module.exports = app;
