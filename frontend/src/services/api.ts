@@ -1,12 +1,14 @@
-// VITE_API_URL must be set in Vercel Dashboard (or .env.production for local builds)
-const BASE_URL = import.meta.env.VITE_API_URL || 'https://pravaas.onrender.com/api';
+// VITE_API_URL is the server root (e.g., https://pravaas.onrender.com)
+// DO NOT include /api — the code appends it automatically
+const SERVER_URL = import.meta.env.VITE_API_URL || 'https://pravaas.onrender.com';
+const BASE_URL = `${SERVER_URL.replace(/\/+$/, '')}/api`;
 
 // Warn developers when env var is missing
 if (!import.meta.env.VITE_API_URL) {
   console.warn(
     '[Pravaas] VITE_API_URL is not set. Using default:',
-    BASE_URL,
-    '\n  Set VITE_API_URL in Vercel Dashboard → Project Settings → Environment Variables'
+    SERVER_URL,
+    '\n  Set VITE_API_URL in Vercel Dashboard → Project Settings → Environment Variables (server root, no /api suffix)'
   );
 }
 
@@ -104,8 +106,7 @@ async function fetchWithRetry(url: string, options: RequestInit = {}, retries = 
 async function wakeBackend(): Promise<boolean> {
   try {
     setConnectionState('waking');
-    const rootUrl = BASE_URL.replace(/\/api\/?$/, '/');
-    const response = await fetchWithTimeout(rootUrl, { method: 'GET' }, 60000);
+    const response = await fetchWithTimeout(SERVER_URL, { method: 'GET' }, 60000);
     return response.ok;
   } catch {
     return false;
@@ -113,7 +114,7 @@ async function wakeBackend(): Promise<boolean> {
 }
 
 export async function checkBackendHealth(): Promise<boolean> {
-  const healthUrl = BASE_URL.replace(/\/api\/?$/, '/health');
+  const healthUrl = `${SERVER_URL}/health`;
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
       if (attempt === 1) {
